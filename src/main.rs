@@ -9,6 +9,7 @@ mod data;
 mod saver;
 
 // commentino molesto
+//ciao
 
 fn main() {
     //finestra principale che si apre quando lancio il programma

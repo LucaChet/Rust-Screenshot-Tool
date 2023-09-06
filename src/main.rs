@@ -11,9 +11,11 @@ mod saver;
 // commentino molesto
 
 fn main() {
+    //finestra principale che si apre quando lancio il programma
     let main_window = WindowDesc::new(ui_builder())
-        .title("My Todo App")
-        .window_size((400., 400.));
+        .title("Screen Grabbing")
+        .window_size((600., 600.));
+
     
     let stored = read_stored();
     let default_state = TodoState {
@@ -21,11 +23,12 @@ fn main() {
         ..Default::default()
     };
 
+    //apre effettivamente finestra con le proprietà definite
     AppLauncher::with_window(main_window)
         .configure_env(|env, _state| {
             env.set(BUTTON_DARK, Color::rgba8(100, 100, 120, 0));
             env.set(BUTTON_LIGHT, Color::rgba8(100, 100, 120, 100));
-            env.set(WINDOW_BACKGROUND_COLOR, Color::rgba8(0, 0, 0, 100));
+            env.set(WINDOW_BACKGROUND_COLOR, Color::rgba8(40,117,125,1));
         })
         .launch(default_state)
         .expect("Failed to start")

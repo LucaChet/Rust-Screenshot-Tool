@@ -15,3 +15,4 @@ screenshots = "0.8.2"
 duration-string = "0.3.0"
 chrono = "0.4"
 druid-widget-nursery = { git = "https://github.com/linebender/druid-widget-nursery" }
+druid-shell = "0.8.3"

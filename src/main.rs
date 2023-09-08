@@ -1,12 +1,12 @@
-use data::TodoState;
+use data::{Format, Screenshot};
 use druid::{WindowDesc, AppLauncher, theme::{BUTTON_DARK, BUTTON_LIGHT, WINDOW_BACKGROUND_COLOR}, Color};
 use im::Vector;
-use saver::read_stored;
+// use saver::read_stored;
 use ui::ui_builder;
 
 mod ui;
 mod data;
-mod saver;
+// mod saver;
 
 // commentino molesto
 //ciao
@@ -18,11 +18,7 @@ fn main() {
         .window_size((600., 600.));
 
     
-    let stored = read_stored();
-    let default_state = TodoState {
-        todos: Vector::from(stored.tasks),
-        ..Default::default()
-    };
+    let todo_state = Screenshot::new("".to_string(), Format::Empty);
 
     //apre effettivamente finestra con le proprietà definite
     AppLauncher::with_window(main_window)
@@ -31,6 +27,6 @@ fn main() {
             env.set(BUTTON_LIGHT, Color::rgba8(100, 100, 120, 100));
             env.set(WINDOW_BACKGROUND_COLOR, Color::rgba8(40,150,125,1));
         })
-        .launch(default_state)
+        .launch(todo_state)
         .expect("Failed to start")
 }

@@ -1999,6 +1999,7 @@ dependencies = [
  "chrono",
  "directories",
  "druid",
+ "druid-shell",
  "druid-widget-nursery",
  "duration-string",
  "im",

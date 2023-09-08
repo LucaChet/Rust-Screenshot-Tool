@@ -1,28 +1,20 @@
-use druid::widget::{Button, Checkbox, Either, Controller, Flex, Label, List, Padding, TextBox, ZStack};
-use druid::{
-    Code, Color, Env, Event, EventCtx, Data, MenuItem, Point, UnitPoint, Widget, WidgetExt,
-};
-use druid::menu::Menu;
-use druid::Command;
 use chrono;
+use druid::widget::{
+    Button, Checkbox, ClipBox, Controller, Either, Flex, Label, LineBreaking, List, Padding,
+    Painter, RadioGroup, TextBox, ZStack,
+};
+use druid::Command;
+use druid::{
+    Code, Color, Data, Env, Event, EventCtx, Lens, LocalizedString, Menu, MenuItem, Point,
+    UnitPoint, Widget, WidgetExt,
+};
 use screenshots::Screen;
-use std::time::{Duration, SystemTime, Instant};
+use std::time::{Duration, Instant, SystemTime};
 
-use crate::data::{TodoItem, TodoState};
+use druid_widget_nursery::DropdownSelect;
+
+use crate::data::{Format, TodoItem, TodoState};
 use crate::saver::Saver;
-
-#[derive(Clone, Data)]
-struct AppData {
-    show_remove_button: bool,
-}
-
-impl Default for AppData {
-    fn default() -> Self {
-        AppData {
-            show_remove_button: false,
-        }
-    }
-}
 
 //albero
 pub fn ui_builder() -> impl Widget<TodoState> {
@@ -34,7 +26,7 @@ pub fn ui_builder() -> impl Widget<TodoState> {
         //         .controller(Enter {}),
         //     1.,
         // )
-        .with_child( 
+        .with_child(
             Button::new("SCREEN 📷").on_click(|_ctx, data: &mut TodoState, _env| {
                 let start = Instant::now();
                 let screens = Screen::all().unwrap();
@@ -48,7 +40,11 @@ pub fn ui_builder() -> impl Widget<TodoState> {
                     //     Err(_) => panic!("conversione errata!"),
                     // }
 
-                    data.todos.push_back(TodoItem{checked: false, text: time });
+                    data.todos.push_back(TodoItem {
+                        checked: false,
+                        text: time,
+                        format: Format::Png,
+                    });
                     // image
                     //     .save(format!("target/{}.png", screen.display_info.id))
                     //     .unwrap();
@@ -62,7 +58,7 @@ pub fn ui_builder() -> impl Widget<TodoState> {
                 // println!("tempo di esecuzione: {:?}", start.elapsed());
             }),
         )
-    .with_child(Saver {});
+        .with_child(Saver {});
 
     let todos = List::new(|| {
         let bg = Color::rgba8(0, 0, 0, 50);
@@ -71,10 +67,16 @@ pub fn ui_builder() -> impl Widget<TodoState> {
             .with_child(Label::new(|data: &TodoItem, _: &Env| data.text.clone()))
             .with_default_spacer()
             // .with_child(Checkbox::new("png").lens(TodoItem::checked))
+            .with_child(DropdownSelect::new(vec![
+                ("Png", Format::Png),
+                ("Jpg", Format::Jpg),
+                ("Gif", Format::Gif),
+            ])).lens(TodoState::todos)
             .with_flex_spacer(0.1)
             .with_child(Button::new("png").on_click(
                 |ctx: &mut EventCtx, data: &mut TodoItem, _env| {
                     let data_clone = data.clone();
+                    // let mouse_position = ctx.window().get_position();
                     let menu: Menu<TodoState> =
                         Menu::empty().entry(MenuItem::new("Remove").on_activate(
                             move |_, main_data: &mut TodoState, _| {
@@ -82,7 +84,7 @@ pub fn ui_builder() -> impl Widget<TodoState> {
                                 main_data.todos.remove(location);
                             },
                         ));
-                        ctx.show_context_menu(menu, Point::new(0., 0.))
+                    ctx.show_context_menu(menu, Point::new(0., 0.))
                 },
             ))
             .with_child(Button::new("jpg").on_click(
@@ -125,7 +127,7 @@ pub fn ui_builder() -> impl Widget<TodoState> {
                 },
             ))
             .background(bg)
-     })
+    })
     .lens(TodoState::todos)
     .scroll()
     .vertical();
@@ -182,6 +184,6 @@ impl<W: Widget<TodoState>> Controller<TodoState, W> for Enter {
         data: &TodoState,
         env: &Env,
     ) {
-        child.update(ctx, old_data, data, env) 
+        child.update(ctx, old_data, data, env)
     }
 }

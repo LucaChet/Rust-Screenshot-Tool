@@ -1,11 +1,11 @@
 use chrono;
 use druid::widget::{
     Button, Checkbox, ClipBox, Controller, Either, Flex, Label, LineBreaking, List, Padding,
-    Painter, RadioGroup, ZStack, TextBox
+    Painter, RadioGroup, ZStack, TextBox, Image
 };
-use druid::Command;
+use druid::{Command, ImageBuf};
 use druid::{
-    Code, Color, Data, Env, Event, EventCtx, Lens, LocalizedString, Menu, MenuItem, Point,
+    FileDialogOptions, FileSpec, commands, Code, Color, Data, Env, Event, EventCtx, Lens, LocalizedString, Menu, MenuItem, Point,
     UnitPoint, Widget, WidgetExt
 };
 use screenshots::Screen;
@@ -14,11 +14,23 @@ use std::time::{Duration, Instant, SystemTime};
 
 use druid_widget_nursery::DropdownSelect;
 
-use crate::data::{Format, Screenshot};
+use crate::data::{Format, Screenshot, ScreenImage};
+use image::*;
 // use crate::saver::Saver;
 
 //albero
 pub fn ui_builder() -> impl Widget<Screenshot> {
+    let rs = FileSpec::new("gif", &["gif"]); 
+    let txt = FileSpec::new("png", &["png"]); 
+    let other = FileSpec::new("Bogus file", &["foo", "bar", "baz"]);
+    let save_dialog_options = FileDialogOptions::new() 
+        .allowed_types(vec![rs, txt, other]) 
+        .default_type(txt) 
+        .default_name("default_save_name") 
+        .name_label("Target") 
+        .title("Choose a target for this lovely file") 
+        .button_text("Export");
+
     Flex::column()
     .with_child(
         Flex::row()
@@ -36,14 +48,14 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
 
                 for screen in screens {
                     println!("capturer {screen:?}");
-                    let mut image = screen.capture().unwrap();
+                    image = screen.capture().unwrap();
                     let mut time = chrono::offset::Utc::now().to_string();
                     // match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH){
                     //     Ok(n) => time = DurationString::from(n).into(),
                     //     Err(_) => panic!("conversione errata!"),
                     // }
 
-                    data.format = Format::Png;    
+                    data.format = Format::Empty;    
                     data.name = time + &data.format.to_string();
                     
                     // image
@@ -62,7 +74,9 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
     .with_child(
 
     Flex::row()
-    .with_child(Label::new(|data: &Screenshot, _: &Env| data.name.clone()))
+    .with_child(Label::new(|data: &Screenshot, _: &Env| {
+        format!("{}{}", data.name, data.format.to_string())
+    }))
     .with_flex_spacer(0.1)
     .with_child(DropdownSelect::new(vec![
                 ("Empty", Format::Empty),
@@ -70,7 +84,10 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
                 ("Jpg", Format::Jpg),
                 ("Gif", Format::Gif),
             ]).lens(Screenshot::format),)
-    )
+    .with_child(Button::new("SAVE").on_click(move |ctx: &mut EventCtx, data: &mut Screenshot, _env| {
+        ctx.submit_command(druid::commands::SHOW_SAVE_PANEL.with(save_dialog_options.clone()))
+    })
+    ))
 
     
     

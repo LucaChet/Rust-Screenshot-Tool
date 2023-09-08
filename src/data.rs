@@ -1,5 +1,6 @@
-use druid::{Data, Lens};
+use druid::{Data, Lens, ImageBuf, widget::{Image, Container}};
 use im::Vector;
+use image::*;
 use serde::{Serialize, Deserialize};
 
 #[derive(Clone, Data, PartialEq, Debug, Serialize, Deserialize)]
@@ -33,6 +34,17 @@ impl Screenshot{
             name,
             format,
         }
+    }
+}
+
+#[derive(Clone, Lens, PartialEq)]
+pub struct ScreenImage{
+    image: ImageBuffer<image::Rgba<u8>, Vec<u8>>,
+}
+
+impl ScreenImage{
+    pub fn new(image: ImageBuffer<image::Rgba<u8>, Vec<u8>>)->Self{
+        Self { image, }
     }
 }
 

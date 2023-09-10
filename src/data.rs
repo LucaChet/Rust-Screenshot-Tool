@@ -31,6 +31,7 @@ pub struct Screenshot {
     pub name: String,
     pub format: Format,
     pub new_name: String,
+    pub editing_name: bool,
 }
 
 impl Screenshot{
@@ -39,10 +40,16 @@ impl Screenshot{
             name,
             format,
             new_name: newname,
+            editing_name: false,
         }
     }
-    pub fn set_label_text(&mut self, text: String) {
-        self.name = text;
+
+    pub fn toggle_textbox_state(data: &mut Screenshot) {
+        if data.editing_name {
+            data.editing_name = false;
+        } else {
+            data.editing_name = true;
+        }
     }
 }
 

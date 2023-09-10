@@ -12,7 +12,7 @@ mod data;
 // commentino molesto
 //ciao
 
-struct Delegate;
+// struct Delegate;
 
 fn main() {
     //finestra principale che si apre quando lancio il programma
@@ -28,7 +28,7 @@ fn main() {
         .configure_env(|env, _state| {
             env.set(BUTTON_DARK, Color::rgba8(100, 100, 120, 0));
             env.set(BUTTON_LIGHT, Color::rgba8(100, 100, 120, 100));
-            env.set(WINDOW_BACKGROUND_COLOR, Color::rgba8(40,150,125,1));
+            env.set(WINDOW_BACKGROUND_COLOR, Color::rgba8(15, 72, 111,1));
         })
         // .delegate(Delegate)
         .launch(todo_state)

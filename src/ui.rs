@@ -14,7 +14,7 @@ use std::time::{Duration, Instant, SystemTime};
 
 use druid_widget_nursery::DropdownSelect;
 
-use crate::data::{Format, Screenshot, ScreenImage};
+use crate::data::{Format, Screenshot};
 use image::*;
 // use crate::saver::Saver;
 
@@ -30,7 +30,7 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
         .name_label("Target") 
         .title("Choose a target for this lovely file") 
         .button_text("Export");
-
+    let mut image:ImageBuffer<Rgba<u8>, Vec<u8>> = image::ImageBuffer::new(600,800);
     Flex::column()
     .with_child(
         Flex::row()
@@ -42,13 +42,13 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
         //     1.,
         // )
         .with_child(
-            Button::new("SCREEN 📷").on_click(|_ctx, data: &mut Screenshot, _env| {
+            Button::new("SCREEN 📷").on_click(move |_ctx, data: &mut Screenshot, _env| {
                 let start = Instant::now();
                 let screens = Screen::all().unwrap();
 
                 for screen in screens {
                     println!("capturer {screen:?}");
-                    image = screen.capture().unwrap();
+                    let image = screen.capture().unwrap();
                     let mut time = chrono::offset::Utc::now().to_string();
                     // match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH){
                     //     Ok(n) => time = DurationString::from(n).into(),

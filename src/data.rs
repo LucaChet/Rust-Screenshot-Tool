@@ -39,12 +39,12 @@ impl Screenshot{
 
 #[derive(Clone, Lens, PartialEq)]
 pub struct ScreenImage{
-    image: ImageBuffer<image::Rgba<u8>, Vec<u8>>,
+    image: Option<image::RgbaImage>, 
 }
 
 impl ScreenImage{
-    pub fn new(image: ImageBuffer<image::Rgba<u8>, Vec<u8>>)->Self{
-        Self { image, }
+    pub fn new()->Self{
+        Self { image: None }
     }
 }
 

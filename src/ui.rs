@@ -1,13 +1,13 @@
 use chrono;
 use druid::widget::{
-    FlexParams, CrossAxisAlignment, LensWrap, Button, Checkbox, ClipBox, Controller, Either, Flex, Image, Label, LineBreaking, List, Padding,
-    Painter, RadioGroup, Svg, SvgData, TextBox, ZStack,
+    FillStrat, FlexParams, CrossAxisAlignment, Button, Controller, Either, Flex, Image, Label, Padding, TextBox, ZStack,
 };
 use druid::{
+    piet::{InterpolationMode},
     WidgetPod, commands, Code, Color, Data, Env, Event, EventCtx, FileDialogOptions, FileSpec, Lens,
-    LocalizedString, Menu, MenuItem, Point, UnitPoint, Widget, WidgetExt,
+    LocalizedString, Menu, MenuItem, Point, UnitPoint, Widget, WidgetExt, ImageBuf,
 };
-use druid::{Command, ImageBuf};
+use druid::{Command};
 use screenshots::Screen;
 use std::ops::Index;
 use std::time::{Duration, Instant, SystemTime};
@@ -143,6 +143,13 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
     row2.add_child(button_save);
 
     col.add_default_spacer();
+    // col.add_child( 
+    //     Image::new( 
+    //         ImageBuf::from_data(include_bytes!("target/screens/2023-09-09_15-51-15-610481200_UTC.png")).unwrap(), 
+    //     )
+    //     .fill_mode(FillStrat::Fill) 
+    //     .interpolation_mode(InterpolationMode::Bilinear), 
+    // );
     // col.add_child(row);
     // col.add_child(row2);
     // col

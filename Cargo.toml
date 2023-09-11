@@ -17,3 +17,5 @@ chrono = "0.4"
 druid-widget-nursery = { git = "https://github.com/linebender/druid-widget-nursery" }
 druid-shell = "0.8.3"
 image = "0.24.7"
+piet = "0.6.2"
+piet-common = { version = "0.6.2", features = ["png"] }

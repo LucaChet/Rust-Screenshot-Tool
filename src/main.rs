@@ -18,7 +18,7 @@ fn main() {
     //finestra principale che si apre quando lancio il programma
     let main_window = WindowDesc::new(ui_builder())
         .title("Screen Grabbing")
-        .window_size((600., 600.));
+        .window_size((800., 600.));
 
     
     let todo_state = Screenshot::new("".to_string(), Format::MainFormat, "".to_string());

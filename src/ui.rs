@@ -1,109 +1,63 @@
 use chrono;
 use druid::widget::{
-    FillStrat, FlexParams, CrossAxisAlignment, Button, Controller, Either, Flex, Image, Label, Padding, TextBox, ZStack,
+    Button, Controller, CrossAxisAlignment, Either, FillStrat, Flex, FlexParams, Image, Label,
+    Padding, TextBox, ZStack,
 };
 use druid::{
-    piet::{InterpolationMode},
-    WidgetPod, commands, Code, Color, Data, Env, Event, EventCtx, FileDialogOptions, FileSpec, Lens,
-    LocalizedString, Menu, MenuItem, Point, UnitPoint, Widget, WidgetExt, ImageBuf,
+    lens, piet::InterpolationMode, Code, Data, Env, Event, EventCtx, FileDialogOptions, FileSpec,
+    ImageBuf, Lens, Point, UnitPoint, Widget, WidgetExt,
 };
-use druid::{Command};
+
 use screenshots::Screen;
 use std::ops::Index;
 use std::time::{Duration, Instant, SystemTime};
 
 use druid_widget_nursery::DropdownSelect;
 
-use crate::data::{Format, Screenshot};
+use crate::data::{Format, Screenshot, self};
 use image::*;
 // use crate::saver::Saver;
 
-
-
 //albero
 pub fn ui_builder() -> impl Widget<Screenshot> {
-    let mut is_editing = false;
 
-    let mut col = Flex::column().with_child(
-        Flex::row()
-            // .with_flex_child(
-            //     nameBox::new()
-            //         .lens(TodoState::new_name)
-            //         .expand_width()
-            //         .controller(Enter {}),
-            //     1.,
-            // )
-            .with_child(
-                Button::new("SCREEN 📷").on_click(|_ctx, data: &mut Screenshot, _env| {
-                    // let start = Instant::now();
-                    let screens = Screen::all().unwrap();
-
-                    //CIRO
-                    // let screens2 = screenshots::DisplayInfo::all();
-                    // let display_info = match screens2{
-                    //     Err(why) => return println!("error: {}", why),
-                    //     Ok(info) => info,
-                    // };
-
-                    // let image2 = screenshots::Screen::new(&display_info[0]);
-
-                    /////////////////////////////////////////////////////////////////////////////////////
-
-                    // for screen in screens {
-                    // println!("capturer {screen:?}");
-                    let image: ImageBuffer<Rgba<u8>, Vec<u8>> = screens[0].capture().unwrap();
-                    let time: String = chrono::offset::Utc::now().to_string();
-
-                    data.format = Format::MainFormat; //default
-                    data.name = time;
-                    data.name = data
-                        .name
-                        .replace(".", "-")
-                        .replace(":", "-")
-                        .replace(" ", "_");
-                    data.name += &data.format.to_string();
-
-                    // image
-                    //     .save(format!("target/screens/{}.png", data.name))
-                    //     .unwrap();
-
-                    // }
-
-                    // let screen = Screen::from_point(100, 100).unwrap();
-                    // println!("capturer {screen:?}");
-
-                    // let image = screen.capture_area(300, 300, 300, 300).unwrap();
-                    // image.save("target/capture_display_with_point.png").unwrap();
-                    // println!("tempo di esecuzione: {:?}", start.elapsed());
-                }),
-            ),
-    );
+    let mut col = Flex::column().with_child(Flex::row().with_child(
+        Button::new("SCREEN 📷").on_click(|_ctx, data: &mut Screenshot, _env| {
+            data.do_screen(_ctx);
+        }),
+    ).with_child(Button::new("Capture Area 🖱️")));
 
     let mut row = Flex::row();
 
-    // let label = Label::new(|data: &Screenshot, _: &Env| {
-    //     format!("{}{}", data.name, data.format.to_string())
-    // });
-
-    let button_modifica =
-        Button::new("Modifca").on_click(|ctx: &mut EventCtx, data: &mut Screenshot, _env| {
+    let button_modifica = Either::new(
+        |data: &Screenshot, _: &Env| data.screen_fatto,
+        Button::new("Modifica nome").on_click(|ctx: &mut EventCtx, data: &mut Screenshot, _env| {
             data.name = data.new_name.clone();
             data.new_name = "".to_string();
             Screenshot::toggle_textbox_state(data);
             ctx.request_update();
-        });
-    
-    // let text_box = TextBox::new()
-    //     .lens(Screenshot::new_name)
-    //     .disabled_if(|data: &Screenshot, _: &Env| data.editing_name == false)
-    //     .controller(Enter {});
+        }),
+        Label::new(""),
+    );
 
-        
+    let gestisci_screen = Either::new(
+        |data: &Screenshot, _: &Env| data.screen_fatto,
+        Button::new("Gestisci screen").on_click(|ctx: &mut EventCtx, data: &mut Screenshot, _env| {
+            data.screen_window(ctx);
+            ctx.request_update();
+        }),
+        Label::new(""),
+    );
+
     // Creiamo un widget Either che può essere o una Label o una TextBox in base allo stato.
-    let either_widget = Either::new(
+    let screen_name = Either::new(
         |data: &Screenshot, _: &Env| data.editing_name,
-        TextBox::new().lens(Screenshot::new_name).controller(Enter {}),
-        Label::new(|data: &Screenshot, _: &Env| format!("{}{}", data.name, data.format.to_string())),
+        TextBox::new()
+            .lens(Screenshot::new_name)
+            .controller(Enter {}),
+        Label::new(|data: &Screenshot, _: &Env| {
+            format!("{}{}", data.name, data.format.to_string())
+        }),
     );
 
     let dropdown = DropdownSelect::new(vec![
@@ -131,26 +85,20 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
                 .button_text("Export");
 
             ctx.submit_command(druid::commands::SHOW_SAVE_PANEL.with(save_dialog_options.clone()))
-        }).align_right();
+        })
+        .align_right();
 
-    row.add_child(either_widget);
+    row.add_child(screen_name);
     row.add_child(button_modifica);
-    // row.add_child(text_box);
-    // row.add_flex_spacer(0.1);
+    row.add_child(gestisci_screen);
 
     let mut row2 = Flex::row();
     row2.add_child(dropdown);
     row2.add_child(button_save);
 
     col.add_default_spacer();
-    // col.add_child( 
-    //     Image::new( 
-    //         ImageBuf::from_data(include_bytes!("target/screens/2023-09-09_15-51-15-610481200_UTC.png")).unwrap(), 
-    //     )
-    //     .fill_mode(FillStrat::Fill) 
-    //     .interpolation_mode(InterpolationMode::Bilinear), 
-    // );
-    // col.add_child(row);
+
+    // // col.add_child(row);
     // col.add_child(row2);
     // col
 
@@ -210,7 +158,6 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
     //                 }),
     //         ),
     // )
-
 
     // let todos = List::new(|| {
     //     let bg = Color::rgba8(0, 0, 0, 50);

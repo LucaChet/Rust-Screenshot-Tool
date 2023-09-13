@@ -108,12 +108,12 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
     let button_save = Button::new("SAVE")
         .disabled_if(|data: &Screenshot, _: &Env| data.name == "")
         .on_click(move |ctx: &mut EventCtx, data: &mut Screenshot, _env| {
-            let rs = FileSpec::new("gif", &["gif"]);
-            let txt = FileSpec::new("png", &["png"]);
-            let other = FileSpec::new("Bogus file", &["foo", "bar", "baz"]);
+            let jpg = FileSpec::new("jpg", &["jpg"]);
+            let png = FileSpec::new("png", &["png"]);
+            // let other = FileSpec::new("Bogus file", &["foo", "bar", "baz"]);
             let save_dialog_options = FileDialogOptions::new()
-                .allowed_types(vec![rs, txt, other])
-                .default_type(txt)
+                .allowed_types(vec![png, jpg])
+                .default_type(png)
                 .default_name(data.name.clone())
                 .name_label("Target")
                 .title("Choose a target for this lovely file")

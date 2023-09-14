@@ -1,19 +1,16 @@
 use druid::{
-    commands,
-    widget::{Controller, FillStrat, Flex, Image, Label, Painter, SizedBox},
-    AppDelegate, Code, Color, Command, Cursor, Data, DelegateCtx, Env, Event, EventCtx, FileSpec,
-    Handled, ImageBuf, Lens, MouseButton, PaintCtx, Point, RenderContext, Target, Widget,
-    WidgetExt, WindowDesc, WindowState,
+    widget::{FillStrat, Flex, Image, Painter, SizedBox},
+    Color, Data, EventCtx, ImageBuf, Lens, PaintCtx, Point, RenderContext, Widget, WidgetExt,
+    WindowDesc,
 };
 
+use crate::controller::*;
 use image::*;
 use screenshots::Screen;
 use serde::{Deserialize, Serialize};
-use std::thread;
-use std::time::Duration;
-use winit::window::Window;
 
-use self::screenshot_derived_lenses::new_name;
+use std::time::Duration;
+use tokio::time;
 
 #[derive(Clone, Data, PartialEq, Debug, Serialize, Deserialize)]
 pub enum Format {
@@ -36,11 +33,11 @@ impl Format {
 
 #[derive(Clone, Data, Lens)]
 pub struct SelectedArea {
-    start: Point,
-    end: Point,
-    width: f64,
-    heigth: f64,
-    scale: f64,
+    pub start: Point,
+    pub end: Point,
+    pub width: f64,
+    pub heigth: f64,
+    pub scale: f64,
 }
 impl SelectedArea {
     pub fn new() -> Self {
@@ -95,32 +92,15 @@ impl Screenshot {
     }
 
     pub fn do_screen(&mut self) {
-        // let start = Instant::now();
 
-        // let mut current = ctx.window().clone();
-        // current.set_window_state(WindowState::Minimized);
-        // let state = current.get_window_state();
-
-        let screens = Screen::all().unwrap();
-        let image: ImageBuffer<Rgba<u8>, Vec<u8>> = screens[0].capture().unwrap();
-        let time: String = chrono::offset::Utc::now().to_string();
-
-        // set_window_state(WindowState::Minimized);
-
-        // let duration = Duration::from_secs(2);
-        // thread::sleep(duration);
-
-        // let screens = Screen::all().unwrap();
-
-        // for screen in screens {
-        // println!("capturer {screen:?}");
-
-        // current.set_window_state(WindowState::Restored);
-        // current.show();
-
-        self.format = Format::MainFormat; //default
-        self.name = time;
-        self.name = self
+        // tokio::spawn(async {
+            // tokio::time::sleep(Duration::from_secs(2)).await;
+            let screens = Screen::all().unwrap();
+            let image: ImageBuffer<Rgba<u8>, Vec<u8>> = screens[0].capture().unwrap();
+            let time: String = chrono::offset::Utc::now().to_string();
+            self.format = Format::MainFormat; //default
+            self.name = time;
+            self.name = self
             .name
             .replace(".", "-")
             .replace(":", "-")
@@ -133,8 +113,29 @@ impl Screenshot {
             image.clone().width() as usize,
             image.clone().height() as usize,
         );
-
         self.screen_fatto = true;
+        self.area_transparency = 0.4;
+        // });
+        
+
+        // self.format = Format::MainFormat; //default
+        // self.name = time;
+        // self.name = self
+        //     .name
+        //     .replace(".", "-")
+        //     .replace(":", "-")
+        //     .replace(" ", "_");
+        // self.name += &self.format.to_string();
+
+        // self.img = ImageBuf::from_raw(
+        //     image.clone().into_raw(),
+        //     druid::piet::ImageFormat::RgbaPremul,
+        //     image.clone().width() as usize,
+        //     image.clone().height() as usize,
+        // );
+
+        // self.screen_fatto = true;
+        // self.area_transparency = 0.4;
     }
 
     pub fn do_screen_area(&mut self) {
@@ -179,310 +180,6 @@ pub fn show_screen(image: ImageBuf) -> impl Widget<Screenshot> {
     SizedBox::new(img).width(1000.).height(1000.)
 }
 
-//capture area
-// fn on_mouse_down(_ctx: &mut EventCtx, data: &mut Screenshot, event: &MouseEvent, _env: &Env) {
-//     if event.button == MouseButton::Left {
-//         data.area.selecting_region = true;
-//         data.area.start_x = event.pos.x;
-//         data.area.start_y = event.pos.y;
-//     }
-// }
-
-// fn on_mouse_up(_ctx: &mut EventCtx, data: &mut Screenshot, event: &MouseEvent, _env: &Env) {
-//     if event.button == MouseButton::Left {
-//         data.area.selecting_region = false;
-//         data.area.end_x = event.pos.x;
-//         data.area.end_y = event.pos.y;
-//         // Cattura lo schermo nella regione selezionata
-//         capture_screen(data);
-//     }
-// }
-
-// fn capture_screen(data: &Screenshot) {
-//     if data.area.selecting_region {
-//         // Calcola le coordinate e le dimensioni della regione da catturare
-//         // let x1 = data.start_x.min(data.end_x);
-//         // let x2 = data.start_x.max(data.end_x);
-//         // let y1 = data.start_y.min(data.end_y);
-//         // let y2 = data.start_y.max(data.end_y);
-//         let displays = screenshots::DisplayInfo::all().expect("error");
-//         let display = displays[0];
-//         let screen = screenshots::Screen::new(&display);
-
-//         // Specifica le coordinate della regione da catturare (x, y, larghezza, altezza)
-//         let region = screen.capture_area(data.area.start_x as i32, data.area.start_y as i32, (data.area.end_x-data.area.start_x) as u32, (data.area.end_y-data.area.start_y) as u32).unwrap();
-
-//         // self.format = Format::MainFormat; //default
-//         // self.name = time;
-//         // self.name = self
-//         //     .name
-//         //     .replace(".", "-")
-//         //     .replace(":", "-")
-//         //     .replace(" ", "_");
-//         // self.name += &self.format.to_string();
-
-//         // self.img = ImageBuf::from_raw(
-//         //     image.clone().into_raw(),
-//         //     druid::piet::ImageFormat::RgbaPremul,
-//         //     image.clone().width() as usize,
-//         //     image.clone().height() as usize,
-//         // );
-
-//         // self.screen_fatto = true;
-
-//         // // Cattura la regione dello schermo specificata
-//         // let screenshot = capture_region(&region).expect("Failed to capture screen");
-
-//         // // Converti la cattura in un'immagine DynamicImage
-//         // let image = DynamicImage::ImageRgba8(ImageBuffer::from_raw(
-//         //     screenshot.width() as u32,
-//         //     screenshot.height() as u32,
-//         //     screenshot.into_vec(),
-//         // ).expect("Failed to create ImageBuffer"));
-
-//         // Salva l'immagine in un file (puoi anche mostrarla nell'app)
-//         // image.save("screenshot.png", ImageFormat::PNG).expect("Failed to save image");
-//     }
-// }
-
-pub struct Delegate;
-
-impl AppDelegate<Screenshot> for Delegate {
-    fn command(
-        &mut self,
-        _ctx: &mut DelegateCtx,
-        _target: Target,
-        cmd: &Command,
-        data: &mut Screenshot,
-        _env: &Env,
-    ) -> Handled {
-        if let Some(file_info) = cmd.get(commands::SAVE_FILE_AS) {
-            // let img_bytes: &[u8] = data.img.raw_pixels();
-            // if let Err(e) = std::fs::write(file_info.path(), img_bytes) {
-            //     println!("Error writing file: {e}");
-            // }
-            // Specifica il formato dell'immagine (in questo caso PNG)
-            let color_type = ColorType::Rgba8;
-            let file = std::fs::File::create(file_info.path()).unwrap();
-            let encoder = image::codecs::png::PngEncoder::new(file);
-
-            if let Err(e) = encoder.write_image(
-                data.img.raw_pixels(),
-                data.img.width() as u32,
-                data.img.height() as u32,
-                color_type,
-            ) {
-                println!("Error writing file: {}", e);
-            }
-            return Handled::Yes;
-        }
-        Handled::No
-    }
-}
-
-pub struct Enter;
-
-impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Enter {
-    fn event(
-        &mut self,
-        child: &mut W,
-        ctx: &mut EventCtx,
-        event: &druid::Event,
-        data: &mut Screenshot,
-        env: &Env,
-    ) {
-        if let Event::KeyUp(key) = event {
-            if key.code == Code::Enter {
-                if data.new_name.trim() != "" {
-                    data.name = data.new_name.clone();
-                    data.new_name = "".to_string();
-                    Screenshot::toggle_textbox_state(data);
-                }
-            }
-        }
-        child.event(ctx, event, data, env)
-    }
-
-    fn lifecycle(
-        &mut self,
-        child: &mut W,
-        ctx: &mut druid::LifeCycleCtx,
-        event: &druid::LifeCycle,
-        data: &Screenshot,
-        env: &Env,
-    ) {
-        child.lifecycle(ctx, event, data, env)
-    }
-
-    fn update(
-        &mut self,
-        child: &mut W,
-        ctx: &mut druid::UpdateCtx,
-        old_data: &Screenshot,
-        data: &Screenshot,
-        env: &Env,
-    ) {
-        child.update(ctx, old_data, data, env)
-    }
-}
-
-pub struct MouseClickDragController;
-
-impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragController {
-    fn event(
-        &mut self,
-        child: &mut W,
-        ctx: &mut druid::EventCtx,
-        event: &druid::Event,
-        data: &mut Screenshot,
-        env: &Env,
-    ) {
-        match event {
-            Event::MouseDown(mouse_event) => {
-                if mouse_event.button == MouseButton::Left {
-                    // Esegui qualcosa quando viene premuto il pulsante sinistro del mouse.
-                    // Ad esempio, puoi iniziare a trascinare un elemento.
-                    // Inizia a tenere traccia del punto in cui è iniziato il trascinamento.
-
-                    ctx.set_cursor(&Cursor::Crosshair);
-                    let start_point = mouse_event.pos;
-
-                    ctx.set_active(true);
-                    // ctx.set_handled();
-
-                    // Memorizza il punto iniziale nel data del widget o in un altro stato.
-                    data.area.start = start_point;
-                    data.area.end = start_point;
-                }
-            }
-            Event::MouseUp(mouse_event) => {
-                if mouse_event.button == MouseButton::Left && ctx.is_active() {
-                    // Esegui qualcosa quando viene rilasciato il pulsante sinistro del mouse.
-                    // Ad esempio, puoi terminare il trascinamento.
-
-                    data.area_transparency = 0.0;
-                    data.flag_selection = true;
-
-                    ctx.set_active(false);
-                    // ctx.set_handled();
-
-                    // Calcola il punto finale del trascinamento e fai qualcosa con esso.
-                    let end_point = mouse_event.pos;
-                    data.area.end = end_point;
-
-                    if mouse_event.pos.x < data.area.start.x {
-                        data.area.start.x = mouse_event.pos.x;
-                    }
-                    if mouse_event.pos.y < data.area.start.y {
-                        data.area.start.y = mouse_event.pos.y;
-                    }
-
-                    ctx.set_cursor(&Cursor::Arrow);
-                }
-            }
-            Event::MouseMove(mouse_event) => {
-                if ctx.is_active() {
-                    // Esegui qualcosa quando il mouse viene spostato durante il trascinamento.
-                    // Ad esempio, aggiorna la posizione dell'elemento trascinato.
-                    let end_point = mouse_event.pos;
-                    data.area.end = end_point;
-                    // Calcola la differenza tra la posizione attuale e quella iniziale.
-
-                    let deltax = (mouse_event.pos.x - data.area.start.x).abs() * data.area.scale;
-                    let deltay = (mouse_event.pos.y - data.area.start.y).abs() * data.area.scale;
-
-                    data.area.width = (deltax).abs();
-                    data.area.heigth = (deltay).abs();
-
-                    // ctx.request_paint();
-                }
-            }
-            _ => {}
-        }
-
-        child.event(ctx, event, data, env);
-    }
-
-    fn lifecycle(
-        &mut self,
-        child: &mut W,
-        ctx: &mut druid::LifeCycleCtx,
-        event: &druid::LifeCycle,
-        data: &Screenshot,
-        env: &Env,
-    ) {
-        child.lifecycle(ctx, event, data, env)
-    }
-
-    fn update(
-        &mut self,
-        child: &mut W,
-        ctx: &mut druid::UpdateCtx,
-        old_data: &Screenshot,
-        data: &Screenshot,
-        env: &Env,
-    ) {
-        child.update(ctx, old_data, data, env)
-    }
-}
-
-pub struct ScreenArea;
-
-impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ScreenArea {
-    fn event(
-        &mut self,
-        child: &mut W,
-        ctx: &mut druid::EventCtx,
-        event: &druid::Event,
-        data: &mut Screenshot,
-        env: &Env,
-    ) {
-        println!("{}", data.window_minimized);
-        if data.flag_selection && data.area_transparency == 0.0 && !ctx.is_active() {
-            if data.area.width != 0.0 && data.area.heigth != 0.0 {
-                data.do_screen_area();
-                // data.area_transparency = 0.4;
-            }
-            data.area.start = Point::new(0.0, 0.0);
-            data.area.end = Point::new(0.0, 0.0);
-            data.flag_selection = false;
-            ctx.window().close();
-        }
-        if data.window_minimized {
-            
-        data.do_screen();
-        data.window_minimized=false;
-        ctx.window().close();
-           
-            
-        }
-
-        child.event(ctx, event, data, env);
-    }
-
-    fn lifecycle(
-        &mut self,
-        child: &mut W,
-        ctx: &mut druid::LifeCycleCtx,
-        event: &druid::LifeCycle,
-        data: &Screenshot,
-        env: &Env,
-    ) {
-        child.lifecycle(ctx, event, data, env)
-    }
-
-    fn update(
-        &mut self,
-        child: &mut W,
-        ctx: &mut druid::UpdateCtx,
-        old_data: &Screenshot,
-        data: &Screenshot,
-        env: &Env,
-    ) {
-        child.update(ctx, old_data, data, env)
-    }
-}
-
 pub fn draw_rect() -> impl Widget<Screenshot> {
     let paint = Painter::new(|ctx: &mut PaintCtx<'_, '_, '_>, data: &Screenshot, _env| {
         let (start, end) = (data.area.start, data.area.end);
@@ -501,57 +198,11 @@ pub fn empty_window() -> impl Widget<Screenshot> {
     let paint = Painter::new(|ctx: &mut PaintCtx<'_, '_, '_>, data: &Screenshot, _env| {
         let (start, end) = (data.area.start, data.area.end);
         let rect = druid::Rect::from_points(start, end);
-        ctx.fill(rect, &Color::rgba(0.0, 0.0, 0.0, 0.4));
-        ctx.stroke(rect, &druid::Color::WHITE, 1.0);
-        // data.do_screen(ctx);
+        ctx.fill(rect, &Color::rgba(0.0, 0.0, 0.0, data.area_transparency));
     })
     .controller(SetScreen {})
     .controller(ScreenArea {})
     .center();
 
     Flex::column().with_child(paint)
-}
-
-pub struct SetScreen;
-
-impl<W: Widget<Screenshot>> Controller<Screenshot, W> for SetScreen {
-    fn event(
-        &mut self,
-        child: &mut W,
-        ctx: &mut druid::EventCtx,
-        event: &druid::Event,
-        data: &mut Screenshot,
-        env: &Env,
-    ) {
-        let displays = screenshots::DisplayInfo::all().expect("error");
-        let scale = displays[0].scale_factor as f64;
-        let width = displays[0].width as f64 * scale;
-        let height = displays[0].height as f64 * scale;
-        data.area.start = Point::new(0.0, 0.0);
-        data.area.end = Point::new(data.area.start.x + width, data.area.start.y + height);
-
-        child.event(ctx, event, data, env);
-    }
-
-    fn lifecycle(
-        &mut self,
-        child: &mut W,
-        ctx: &mut druid::LifeCycleCtx,
-        event: &druid::LifeCycle,
-        data: &Screenshot,
-        env: &Env,
-    ) {
-        child.lifecycle(ctx, event, data, env)
-    }
-
-    fn update(
-        &mut self,
-        child: &mut W,
-        ctx: &mut druid::UpdateCtx,
-        old_data: &Screenshot,
-        data: &Screenshot,
-        env: &Env,
-    ) {
-        child.update(ctx, old_data, data, env)
-    }
 }

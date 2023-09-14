@@ -1,21 +1,17 @@
-use chrono;
 use druid::widget::{
-    Button, Controller, CrossAxisAlignment, Either, FillStrat, Flex, FlexParams, Image, Label,
-    Padding, TextBox, ZStack,
-};
-use druid::{
-    lens, piet::InterpolationMode, Code, Data, Env, Event, EventCtx, FileDialogOptions, FileSpec,
-    ImageBuf, Lens, Point, UnitPoint, Widget, WidgetExt, WindowDesc, WindowState, WindowLevel,
+    Button, CrossAxisAlignment, Either, Flex, FlexParams, Label, Padding, TextBox, ZStack,
 };
 
-use screenshots::Screen;
-use std::ops::Index;
-use std::time::{Duration, Instant, SystemTime};
+use druid::{
+    Env, EventCtx, FileDialogOptions, FileSpec, UnitPoint, Widget, WidgetExt, WindowDesc,
+    WindowState,
+};
 
 use druid_widget_nursery::DropdownSelect;
 
+use crate::controller::*;
 use crate::data::*;
-use image::*;
+
 // use crate::saver::Saver;
 
 //albero
@@ -29,14 +25,11 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
         Flex::row()
             .with_child(Button::new("SCREEN 📷").on_click(
                 move |ctx, data: &mut Screenshot, _env| {
+
                     let mut current = ctx.window().clone();
-                    // current.set_window_state(WindowState::Minimized);
-                    // current.hide();
-                    // current.set_always_on_top(false);
-                    // current.set_size(druid::Size::new(0.0, 0.0));
-                    // current.set_position(Point::new(0.0, 0.0));
-                    
+                    current.set_window_state(WindowState::Minimized);
                     data.window_minimized = true;
+
                     let new_win = WindowDesc::new(empty_window())
                         .show_titlebar(false)
                         .transparent(true)
@@ -44,25 +37,32 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
                         .resizable(true)
                         .set_position((0.0, 0.0))
                         .set_always_on_top(true);
-                        
+
                     ctx.new_window(new_win);
                     // current.show();
                     // data.do_screen(ctx);
-                    
+
                     // current.set_window_state(WindowState::Restored);
                 },
             ))
             .with_child(Button::new("Capture Area 🖱️").on_click(
-                move |ctx: &mut EventCtx, data: &mut Screenshot, _env| {
+                move |ctx: &mut EventCtx, _data: &mut Screenshot, _env| {
                     let mut current = ctx.window().clone();
                     current.set_window_state(WindowState::Minimized);
-                    data.window_minimized = true;
-                    let new_win = WindowDesc::new(draw_rect())
-                        .show_titlebar(false)
-                        .transparent(true)
-                        .window_size((width, height))
-                        .resizable(false)
-                        .set_position((0.0, 0.0));
+                    // data.window_minimized = true;
+                    // let background_color = Color::rgba(0.0, 0.0, 0.0, 0.5);
+                    let new_win = WindowDesc::new(
+                        // Container::new(draw_rect())
+                        //     .background(background_color)
+                        //     .center(),
+                        draw_rect(),
+                    )
+                    .show_titlebar(false)
+                    .transparent(true)
+                    .window_size((width, height))
+                    .resizable(false)
+                    .set_position((0.0, 0.0));
+
                     ctx.new_window(new_win);
                     // data.area = SelectedArea::new();
                     // current.set_window_state(WindowState::Restored);
@@ -130,14 +130,14 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
                 FileSpec::new("bmp", &["bmp"]),
             ];
 
-            let default_name = format!("{}{}", data.name.clone(), data.format.to_string());
+            let default_name = format!("{}{}", data.name, data.format.to_string());
             let save_dialog_options = FileDialogOptions::new()
                 .allowed_types(formats)
                 .default_type(FileSpec::new("png", &["png"]))
-                .default_name(default_name)
-                .name_label("Target")
-                .title("Choose a target for this lovely file")
-                .button_text("Export");
+                // .title("Choose a target for this lovely file")
+                // .name_label("Target")
+                .default_name(default_name);
+            // .button_text("Export");
 
             ctx.submit_command(druid::commands::SHOW_SAVE_PANEL.with(save_dialog_options.clone()))
         })

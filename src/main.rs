@@ -1,12 +1,13 @@
-use data::{Format, Screenshot, Delegate};
-use druid::{image, theme, commands, AppDelegate, Env, Target, Command, DelegateCtx, Handled, WindowDesc, AppLauncher, theme::{BUTTON_DARK, BUTTON_LIGHT, WINDOW_BACKGROUND_COLOR}, Color};
-use im::Vector;
+use data::{Format, Screenshot};
+use controller::*;
+
+use druid::{WindowDesc, AppLauncher, theme::{BUTTON_DARK, BUTTON_LIGHT, WINDOW_BACKGROUND_COLOR}, Color};
 // use saver::read_stored;
 use ui::ui_builder;
-use image::*;
 
 mod ui;
 mod data;
+mod controller;
 // mod saver;
 
 // commentino molesto

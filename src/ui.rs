@@ -5,7 +5,7 @@ use druid::widget::{
 };
 use druid::{
     lens, piet::InterpolationMode, Code, Data, Env, Event, EventCtx, FileDialogOptions, FileSpec,
-    ImageBuf, Lens, Point, UnitPoint, Widget, WidgetExt, WindowDesc, WindowState,
+    ImageBuf, Lens, Point, UnitPoint, Widget, WidgetExt, WindowDesc, WindowState, WindowLevel,
 };
 
 use screenshots::Screen;
@@ -29,17 +29,26 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
         Flex::row()
             .with_child(Button::new("SCREEN 📷").on_click(
                 move |ctx, data: &mut Screenshot, _env| {
-                    // let mut current = ctx.window().clone();
+                    let mut current = ctx.window().clone();
                     // current.set_window_state(WindowState::Minimized);
-                    // let new_win = WindowDesc::new(empty_window())
-                    //     .show_titlebar(false)
-                    //     .transparent(true)
-                    //     .window_size((width, height))
-                    //     .resizable(false)
-                    //     .set_position((0.0, 0.0));
-                    // ctx.new_window(new_win);
-                    data.do_screen(ctx);
-                    // ctx.window().clone().close();
+                    // current.hide();
+                    // current.set_always_on_top(false);
+                    // current.set_size(druid::Size::new(0.0, 0.0));
+                    // current.set_position(Point::new(0.0, 0.0));
+                    
+                    data.window_minimized = true;
+                    let new_win = WindowDesc::new(empty_window())
+                        .show_titlebar(false)
+                        .transparent(true)
+                        .window_size((width, height))
+                        .resizable(true)
+                        .set_position((0.0, 0.0))
+                        .set_always_on_top(true);
+                        
+                    ctx.new_window(new_win);
+                    // current.show();
+                    // data.do_screen(ctx);
+                    
                     // current.set_window_state(WindowState::Restored);
                 },
             ))
@@ -47,6 +56,7 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
                 move |ctx: &mut EventCtx, data: &mut Screenshot, _env| {
                     let mut current = ctx.window().clone();
                     current.set_window_state(WindowState::Minimized);
+                    data.window_minimized = true;
                     let new_win = WindowDesc::new(draw_rect())
                         .show_titlebar(false)
                         .transparent(true)
@@ -56,7 +66,7 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
                     ctx.new_window(new_win);
                     // data.area = SelectedArea::new();
                     // current.set_window_state(WindowState::Restored);
-               },
+                },
             )),
     );
 
@@ -108,13 +118,23 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
     let button_save = Button::new("SAVE")
         .disabled_if(|data: &Screenshot, _: &Env| data.name == "")
         .on_click(move |ctx: &mut EventCtx, data: &mut Screenshot, _env| {
-            let jpg = FileSpec::new("jpg", &["jpg"]);
-            let png = FileSpec::new("png", &["png"]);
-            // let other = FileSpec::new("Bogus file", &["foo", "bar", "baz"]);
+            let formats = vec![
+                FileSpec::new("jpg", &["jpg"]),
+                FileSpec::new("png", &["png"]),
+                FileSpec::new("gif", &["gif"]),
+                FileSpec::new("pnm", &["pnm"]),
+                FileSpec::new("tga", &["tga"]),
+                FileSpec::new("qoi", &["qoi"]),
+                FileSpec::new("tiff", &["tiff"]),
+                FileSpec::new("webp", &["webp"]),
+                FileSpec::new("bmp", &["bmp"]),
+            ];
+
+            let default_name = format!("{}{}", data.name.clone(), data.format.to_string());
             let save_dialog_options = FileDialogOptions::new()
-                .allowed_types(vec![png, jpg])
-                .default_type(png)
-                .default_name(data.name.clone())
+                .allowed_types(formats)
+                .default_type(FileSpec::new("png", &["png"]))
+                .default_name(default_name)
                 .name_label("Target")
                 .title("Choose a target for this lovely file")
                 .button_text("Export");

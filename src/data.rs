@@ -1,7 +1,9 @@
 use druid::{
+    commands,
     widget::{Controller, FillStrat, Flex, Image, Label, Painter, SizedBox},
-    Code, Color, Data, Env, Event, EventCtx, ImageBuf, Lens, MouseButton, PaintCtx, Point,
-    RenderContext, Widget, WidgetExt, WindowDesc, WindowState, Cursor, AppDelegate, Handled, Target, commands, Command, DelegateCtx, FileSpec
+    AppDelegate, Code, Color, Command, Cursor, Data, DelegateCtx, Env, Event, EventCtx, FileSpec,
+    Handled, ImageBuf, Lens, MouseButton, PaintCtx, Point, RenderContext, Target, Widget,
+    WidgetExt, WindowDesc, WindowState,
 };
 
 use image::*;
@@ -9,6 +11,7 @@ use screenshots::Screen;
 use serde::{Deserialize, Serialize};
 use std::thread;
 use std::time::Duration;
+use winit::window::Window;
 
 use self::screenshot_derived_lenses::new_name;
 
@@ -62,8 +65,9 @@ pub struct Screenshot {
     pub screen_fatto: bool,
     pub img: ImageBuf,
     pub area: SelectedArea,
-    pub area_transparency: f64, 
-    pub flag_selection: bool,
+    pub area_transparency: f64,
+    pub flag_selection: bool, //serve per fare far partire il controller solo dopo aver acquisito l'area
+    pub window_minimized: bool,
 }
 
 impl Screenshot {
@@ -78,6 +82,7 @@ impl Screenshot {
             area: SelectedArea::new(),
             area_transparency: 0.4,
             flag_selection: false,
+            window_minimized: false,
         }
     }
 
@@ -89,12 +94,13 @@ impl Screenshot {
         }
     }
 
-    pub fn do_screen(&mut self, ctx: &mut EventCtx) {
+    pub fn do_screen(&mut self) {
         // let start = Instant::now();
-        let mut current = ctx.window().clone();
-        current.set_window_state(WindowState::Minimized);
+
+        // let mut current = ctx.window().clone();
+        // current.set_window_state(WindowState::Minimized);
         // let state = current.get_window_state();
-        
+
         let screens = Screen::all().unwrap();
         let image: ImageBuffer<Rgba<u8>, Vec<u8>> = screens[0].capture().unwrap();
         let time: String = chrono::offset::Utc::now().to_string();
@@ -129,16 +135,15 @@ impl Screenshot {
         );
 
         self.screen_fatto = true;
-
     }
 
-    pub fn do_screen_area(&mut self){
-        println!("{}", self.area_transparency);
+    pub fn do_screen_area(&mut self) {
+        // println!("{}", self.area_transparency);
         let screen = Screen::from_point(0, 0).unwrap();
         let image = screen
             .capture_area(
-                ( (self.area.start.x) * self.area.scale) as i32,
-                ( (self.area.start.y) * self.area.scale) as i32,
+                ((self.area.start.x) * self.area.scale) as i32,
+                ((self.area.start.y) * self.area.scale) as i32,
                 (self.area.width) as u32,
                 (self.area.heigth) as u32,
             )
@@ -160,8 +165,7 @@ impl Screenshot {
         );
 
         self.screen_fatto = true;
-        self.area_transparency=0.4;
-
+        self.area_transparency = 0.4;
     }
 
     pub fn screen_window(&mut self, ctx: &mut EventCtx) {
@@ -241,36 +245,39 @@ pub fn show_screen(image: ImageBuf) -> impl Widget<Screenshot> {
 //     }
 // }
 
-
 pub struct Delegate;
 
-
-impl AppDelegate<Screenshot> for Delegate { 
-    fn command( 
-        &mut self, 
-        _ctx: &mut DelegateCtx, 
-        _target: Target, 
-        cmd: &Command, 
-        data: &mut Screenshot, 
-        _env: &Env, 
-    ) -> Handled { 
-        if let Some(file_info) = cmd.get(commands::SAVE_FILE_AS) { 
+impl AppDelegate<Screenshot> for Delegate {
+    fn command(
+        &mut self,
+        _ctx: &mut DelegateCtx,
+        _target: Target,
+        cmd: &Command,
+        data: &mut Screenshot,
+        _env: &Env,
+    ) -> Handled {
+        if let Some(file_info) = cmd.get(commands::SAVE_FILE_AS) {
             // let img_bytes: &[u8] = data.img.raw_pixels();
-            // if let Err(e) = std::fs::write(file_info.path(), img_bytes) { 
-            //     println!("Error writing file: {e}"); 
-            // } 
-                   // Specifica il formato dell'immagine (in questo caso PNG)
-                   let color_type = ColorType::Rgba8;
-                   let file = std::fs::File::create(file_info.path()).unwrap();
-                   let encoder = image::codecs::png::PngEncoder::new(file);
-       
-                   if let Err(e) = encoder.write_image(data.img.raw_pixels(), data.img.width() as u32, data.img.height() as u32, color_type) {
-                       println!("Error writing file: {}", e);
-                   }
-            return Handled::Yes; 
-        } 
-        Handled::No 
-    } 
+            // if let Err(e) = std::fs::write(file_info.path(), img_bytes) {
+            //     println!("Error writing file: {e}");
+            // }
+            // Specifica il formato dell'immagine (in questo caso PNG)
+            let color_type = ColorType::Rgba8;
+            let file = std::fs::File::create(file_info.path()).unwrap();
+            let encoder = image::codecs::png::PngEncoder::new(file);
+
+            if let Err(e) = encoder.write_image(
+                data.img.raw_pixels(),
+                data.img.width() as u32,
+                data.img.height() as u32,
+                color_type,
+            ) {
+                println!("Error writing file: {}", e);
+            }
+            return Handled::Yes;
+        }
+        Handled::No
+    }
 }
 
 pub struct Enter;
@@ -336,13 +343,13 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
                     // Esegui qualcosa quando viene premuto il pulsante sinistro del mouse.
                     // Ad esempio, puoi iniziare a trascinare un elemento.
                     // Inizia a tenere traccia del punto in cui è iniziato il trascinamento.
-                    
+
                     ctx.set_cursor(&Cursor::Crosshair);
                     let start_point = mouse_event.pos;
-                    
+
                     ctx.set_active(true);
                     // ctx.set_handled();
-                    
+
                     // Memorizza il punto iniziale nel data del widget o in un altro stato.
                     data.area.start = start_point;
                     data.area.end = start_point;
@@ -355,7 +362,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
 
                     data.area_transparency = 0.0;
                     data.flag_selection = true;
-                
+
                     ctx.set_active(false);
                     // ctx.set_handled();
 
@@ -370,7 +377,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
                         data.area.start.y = mouse_event.pos.y;
                     }
 
-                    ctx.set_cursor(&Cursor::Arrow);                
+                    ctx.set_cursor(&Cursor::Arrow);
                 }
             }
             Event::MouseMove(mouse_event) => {
@@ -383,7 +390,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
 
                     let deltax = (mouse_event.pos.x - data.area.start.x).abs() * data.area.scale;
                     let deltay = (mouse_event.pos.y - data.area.start.y).abs() * data.area.scale;
-                    
+
                     data.area.width = (deltax).abs();
                     data.area.heigth = (deltay).abs();
 
@@ -419,7 +426,6 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
     }
 }
 
-
 pub struct ScreenArea;
 
 impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ScreenArea {
@@ -431,8 +437,9 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ScreenArea {
         data: &mut Screenshot,
         env: &Env,
     ) {
-        if data.flag_selection && data.area_transparency==0.0 && !ctx.is_active(){
-            if data.area.width != 0.0 && data.area.heigth != 0.0{
+        println!("{}", data.window_minimized);
+        if data.flag_selection && data.area_transparency == 0.0 && !ctx.is_active() {
+            if data.area.width != 0.0 && data.area.heigth != 0.0 {
                 data.do_screen_area();
                 // data.area_transparency = 0.4;
             }
@@ -441,6 +448,15 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ScreenArea {
             data.flag_selection = false;
             ctx.window().close();
         }
+        if data.window_minimized {
+            
+        data.do_screen();
+        data.window_minimized=false;
+        ctx.window().close();
+           
+            
+        }
+
         child.event(ctx, event, data, env);
     }
 
@@ -467,7 +483,6 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ScreenArea {
     }
 }
 
-
 pub fn draw_rect() -> impl Widget<Screenshot> {
     let paint = Painter::new(|ctx: &mut PaintCtx<'_, '_, '_>, data: &Screenshot, _env| {
         let (start, end) = (data.area.start, data.area.end);
@@ -482,17 +497,61 @@ pub fn draw_rect() -> impl Widget<Screenshot> {
     Flex::column().with_child(paint)
 }
 
-// pub fn empty_window() -> impl Widget<Screenshot> {
-//     let paint = Painter::new(|ctx: &mut PaintCtx<'_, '_, '_>, data: &Screenshot, _env| {
-//         // let (start, end) = (data.area.start, data.area.end);
-//         // let rect = druid::Rect::from_points(start, end);
-//         // ctx.fill(rect, &Color::rgba(0.0, 0.0, 0.0, 0.4));
-//         //ctx.stroke(rect, &druid::Color::WHITE, 1.0);
-//         // data.do_screen(ctx);
-//     });
-//     // .controller(MouseClickDragController {})
-//     // .controller(SelectionScreenController{})
-//     // .center();
+pub fn empty_window() -> impl Widget<Screenshot> {
+    let paint = Painter::new(|ctx: &mut PaintCtx<'_, '_, '_>, data: &Screenshot, _env| {
+        let (start, end) = (data.area.start, data.area.end);
+        let rect = druid::Rect::from_points(start, end);
+        ctx.fill(rect, &Color::rgba(0.0, 0.0, 0.0, 0.4));
+        ctx.stroke(rect, &druid::Color::WHITE, 1.0);
+        // data.do_screen(ctx);
+    })
+    .controller(SetScreen {})
+    .controller(ScreenArea {})
+    .center();
 
-//     Flex::column().with_child(Label::new(""))
-// }
+    Flex::column().with_child(paint)
+}
+
+pub struct SetScreen;
+
+impl<W: Widget<Screenshot>> Controller<Screenshot, W> for SetScreen {
+    fn event(
+        &mut self,
+        child: &mut W,
+        ctx: &mut druid::EventCtx,
+        event: &druid::Event,
+        data: &mut Screenshot,
+        env: &Env,
+    ) {
+        let displays = screenshots::DisplayInfo::all().expect("error");
+        let scale = displays[0].scale_factor as f64;
+        let width = displays[0].width as f64 * scale;
+        let height = displays[0].height as f64 * scale;
+        data.area.start = Point::new(0.0, 0.0);
+        data.area.end = Point::new(data.area.start.x + width, data.area.start.y + height);
+
+        child.event(ctx, event, data, env);
+    }
+
+    fn lifecycle(
+        &mut self,
+        child: &mut W,
+        ctx: &mut druid::LifeCycleCtx,
+        event: &druid::LifeCycle,
+        data: &Screenshot,
+        env: &Env,
+    ) {
+        child.lifecycle(ctx, event, data, env)
+    }
+
+    fn update(
+        &mut self,
+        child: &mut W,
+        ctx: &mut druid::UpdateCtx,
+        old_data: &Screenshot,
+        data: &Screenshot,
+        env: &Env,
+    ) {
+        child.update(ctx, old_data, data, env)
+    }
+}

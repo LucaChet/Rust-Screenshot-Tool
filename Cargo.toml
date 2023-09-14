@@ -22,3 +22,4 @@ piet-common = { version = "0.6.2", features = ["png"] }
 scrap = "0.5.0"
 native-dialog = "0.6.4"
 uuid = {version = "1.4.1", features = ["serde", "v4"]}
+winit = "0.28.5"

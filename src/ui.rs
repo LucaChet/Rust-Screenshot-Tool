@@ -29,7 +29,6 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
                 move |ctx, data: &mut Screenshot, _env| {
                     let mut current = ctx.window().clone();
                     current.set_window_state(WindowState::Minimized);
-                    // data.t1 = ctx.request_timer(Duration::from_secs(1));
                     data.full_screen = true;
 
                     let new_win = WindowDesc::new(draw_rect())
@@ -41,10 +40,6 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
                         .set_always_on_top(true);
 
                     ctx.new_window(new_win);
-                    // current.show();
-                    // data.do_screen(ctx);
-
-                    // current.set_window_state(WindowState::Restored);
                 },
             ))
             .with_child(Button::new("Capture Area 🖱️").on_click(
@@ -52,7 +47,7 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
                     let mut current = ctx.window().clone();
                     current.set_window_state(WindowState::Minimized);
                     data.full_screen = false;
-                    // let background_color = Color::rgba(0.0, 0.0, 0.0, 0.5);
+                    
                     let new_win = WindowDesc::new(draw_rect())
                         .show_titlebar(false)
                         .transparent(true)
@@ -61,8 +56,6 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
                         .set_position((0.0, 0.0));
 
                     ctx.new_window(new_win);
-                    // data.area = SelectedArea::new();
-                    // current.set_window_state(WindowState::Restored);
                 },
             )),
     );

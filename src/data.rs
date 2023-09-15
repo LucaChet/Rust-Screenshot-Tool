@@ -1,9 +1,9 @@
 use druid::{
     widget::{Button, FillStrat, Flex, Image, Painter, SizedBox},
-    Color, Data, EventCtx, ImageBuf, Lens, PaintCtx, Point, RenderContext, Widget, WidgetExt,
-    WindowDesc, WindowState
+    Rect, Color, Data, EventCtx, ImageBuf, Lens, PaintCtx, Point, RenderContext, Widget, WidgetExt,
+    WindowDesc, WindowState, CursorDesc, TimerToken
 };
-use druid_shell::TimerToken;
+// use druid_shell::{TimerToken};
 
 use crate::controller::*;
 use image::*;
@@ -156,7 +156,10 @@ impl Screenshot {
 }
 
 pub fn show_screen(image: ImageBuf) -> impl Widget<Screenshot> {
-    let img = Image::new(image).fill_mode(FillStrat::ScaleDown);
+    let mut img = Image::new(image).fill_mode(FillStrat::ScaleDown);
+    // img.set_clip_area(
+    //     Some(Rect::new(10.0, 10.0, 300.0, 300.0))
+    // );
 
     // let (w, h) = (image.width(), image.height());
 
@@ -192,24 +195,21 @@ pub fn show_screen(image: ImageBuf) -> impl Widget<Screenshot> {
             // transform::rotate(img, 45, rasterColor::rgb(0, 0, 0));
         });
     let crop_button = Button::new("ritaglia").on_click(move |ctx: &mut EventCtx, _data: &mut Screenshot, _env| {
-        let mut current = ctx.window().clone();
-        current.set_window_state(WindowState::Minimized);
-        // data.window_minimized = true;
-        // let background_color = Color::rgba(0.0, 0.0, 0.0, 0.5);
-        let new_win = WindowDesc::new(
-            // Container::new(draw_rect())
-            //     .background(background_color)
-            //     .center(),
-            draw_rect(),
-        )
-        .show_titlebar(false)
-        .transparent(true)
-        .window_size((1000., 1000.))
-        .resizable(false)
-        .set_position((0.0, 0.0));
+        // let mut current = ctx.window().clone();
+        // current.set_window_state(WindowState::Minimized);
 
-        ctx.new_window(new_win);});
+        // let new_win = WindowDesc::new(
+        //     draw_rect()
+        // )
+        // .show_titlebar(false)
+        // .transparent(true)
+        // .window_size((1000., 1000.))
+        // .resizable(false)
+        // .set_position((0.0, 0.0));
 
+        // ctx.new_window(new_win);
+    });
+    
     row.add_child(ruota_button);
     row.add_child(crop_button);
     col.add_child(row);

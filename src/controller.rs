@@ -1,9 +1,11 @@
+use std::time::Duration;
 use druid::{
     commands, AppDelegate, Code, Command, Cursor, DelegateCtx, Env, Event, EventCtx, Handled,
     MouseButton, Point, Target, Widget,
 };
 
 use druid::widget::Controller;
+use druid_shell::TimerToken;
 
 use crate::data::*;
 use image::*;
@@ -47,59 +49,6 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for SetScreen {
     }
 }
 
-pub struct ScreenArea;
-
-impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ScreenArea {
-    fn event(
-        &mut self,
-        child: &mut W,
-        ctx: &mut druid::EventCtx,
-        event: &druid::Event,
-        data: &mut Screenshot,
-        env: &Env,
-    ) {
-        if data.flag_selection && data.area_transparency == 0.0 && !ctx.is_active() {
-            if data.area.width != 0.0 && data.area.heigth != 0.0 {
-                data.do_screen_area();
-                // data.area_transparency = 0.4;
-            }
-            data.area.start = Point::new(0.0, 0.0);
-            data.area.end = Point::new(0.0, 0.0);
-            data.flag_selection = false;
-            ctx.window().close();
-        } else if data.window_minimized {
-            data.do_screen();
-            data.area.start = Point::new(0.0, 0.0);
-            data.area.end = Point::new(0.0, 0.0);
-            data.window_minimized = false;
-            ctx.window().close();
-        }
-
-        child.event(ctx, event, data, env);
-    }
-
-    fn lifecycle(
-        &mut self,
-        child: &mut W,
-        ctx: &mut druid::LifeCycleCtx,
-        event: &druid::LifeCycle,
-        data: &Screenshot,
-        env: &Env,
-    ) {
-        child.lifecycle(ctx, event, data, env)
-    }
-
-    fn update(
-        &mut self,
-        child: &mut W,
-        ctx: &mut druid::UpdateCtx,
-        old_data: &Screenshot,
-        data: &Screenshot,
-        env: &Env,
-    ) {
-        child.update(ctx, old_data, data, env)
-    }
-}
 
 pub struct Enter;
 
@@ -147,7 +96,9 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Enter {
     }
 }
 
-pub struct MouseClickDragController;
+pub struct MouseClickDragController{
+    pub t1: TimerToken,
+}
 
 impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragController {
     fn event(
@@ -158,6 +109,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
         data: &mut Screenshot,
         env: &Env,
     ) {
+        if data.full_screen == false{
         match event {
             Event::MouseDown(mouse_event) => {
                 if mouse_event.button == MouseButton::Left {
@@ -183,6 +135,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
 
                     data.area_transparency = 0.0;
                     data.flag_selection = true;
+                    self.t1 = ctx.request_timer(Duration::from_millis(500));
 
                     ctx.set_active(false);
                     // ctx.set_handled();
@@ -218,8 +171,39 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
                     // ctx.request_paint();
                 }
             }
+            Event::Timer(id) => {
+                if self.t1 == *id && data.flag_selection{
+                    if data.area.width != 0.0 && data.area.heigth != 0.0 {
+                        data.do_screen_area();
+                        // data.area_transparency = 0.4;
+                    }
+                    data.area.start = Point::new(0.0, 0.0);
+                    data.area.end = Point::new(0.0, 0.0);
+                    data.flag_selection = false;
+                    data.screen_window(ctx);
+                    ctx.window().close();
+                }
+            }
+            
+
             _ => {}
         }
+    }else if data.full_screen{
+        self.t1 = ctx.request_timer(Duration::from_millis(500));
+        match event {
+            Event::Timer(id) => {
+                if self.t1 == *id{
+                    data.do_screen();
+                    data.area.start = Point::new(0.0, 0.0);
+                    data.area.end = Point::new(0.0, 0.0);
+                    data.screen_window(ctx);
+                    ctx.window().close();
+                }
+            }
+
+            _ => {}
+        }
+    }
 
         child.event(ctx, event, data, env);
     }

@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use druid::widget::{
     Button, CrossAxisAlignment, Either, Flex, FlexParams, Label, Padding, TextBox, ZStack,
 };
@@ -25,12 +27,12 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
         Flex::row()
             .with_child(Button::new("SCREEN 📷").on_click(
                 move |ctx, data: &mut Screenshot, _env| {
-
                     let mut current = ctx.window().clone();
                     current.set_window_state(WindowState::Minimized);
-                    data.window_minimized = true;
+                    // data.t1 = ctx.request_timer(Duration::from_secs(1));
+                    data.full_screen = true;
 
-                    let new_win = WindowDesc::new(empty_window())
+                    let new_win = WindowDesc::new(draw_rect())
                         .show_titlebar(false)
                         .transparent(true)
                         .window_size((width, height))
@@ -46,22 +48,17 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
                 },
             ))
             .with_child(Button::new("Capture Area 🖱️").on_click(
-                move |ctx: &mut EventCtx, _data: &mut Screenshot, _env| {
+                move |ctx: &mut EventCtx, data: &mut Screenshot, _env| {
                     let mut current = ctx.window().clone();
                     current.set_window_state(WindowState::Minimized);
-                    // data.window_minimized = true;
+                    data.full_screen = false;
                     // let background_color = Color::rgba(0.0, 0.0, 0.0, 0.5);
-                    let new_win = WindowDesc::new(
-                        // Container::new(draw_rect())
-                        //     .background(background_color)
-                        //     .center(),
-                        draw_rect(),
-                    )
-                    .show_titlebar(false)
-                    .transparent(true)
-                    .window_size((width, height))
-                    .resizable(false)
-                    .set_position((0.0, 0.0));
+                    let new_win = WindowDesc::new(draw_rect())
+                        .show_titlebar(false)
+                        .transparent(true)
+                        .window_size((width, height))
+                        .resizable(false)
+                        .set_position((0.0, 0.0));
 
                     ctx.new_window(new_win);
                     // data.area = SelectedArea::new();

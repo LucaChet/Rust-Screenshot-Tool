@@ -1,16 +1,15 @@
 use druid::{
     widget::{Button, FillStrat, Flex, Image, Painter, SizedBox},
     Color, Data, EventCtx, ImageBuf, Lens, PaintCtx, Point, RenderContext, Widget, WidgetExt,
-    WindowDesc,
+    WindowDesc, WindowState
 };
+use druid_shell::TimerToken;
 
 use crate::controller::*;
 use image::*;
-use kurbo::Affine;
 use raster::{transform, Color as rasterColor, Image as rasterImage};
 use screenshots::Screen;
 use serde::{Deserialize, Serialize};
-use nalgebra::Matrix3;
 
 #[derive(Clone, Data, PartialEq, Debug, Serialize, Deserialize)]
 pub enum Format {
@@ -64,7 +63,7 @@ pub struct Screenshot {
     pub area: SelectedArea,
     pub area_transparency: f64,
     pub flag_selection: bool, //serve per fare far partire il controller solo dopo aver acquisito l'area
-    pub window_minimized: bool,
+    pub full_screen: bool,
 }
 
 impl Screenshot {
@@ -79,7 +78,7 @@ impl Screenshot {
             area: SelectedArea::new(),
             area_transparency: 0.4,
             flag_selection: false,
-            window_minimized: false,
+            full_screen: false,
         }
     }
 
@@ -92,6 +91,7 @@ impl Screenshot {
     }
 
     pub fn do_screen(&mut self) {
+        
         let screens = Screen::all().unwrap();
         let image: ImageBuffer<Rgba<u8>, Vec<u8>> = screens[0].capture().unwrap();
         let time: String = chrono::offset::Utc::now().to_string();
@@ -149,7 +149,8 @@ impl Screenshot {
     pub fn screen_window(&mut self, ctx: &mut EventCtx) {
         let window = WindowDesc::new(show_screen(self.img.clone()))
             .title(self.name.clone())
-            .set_window_state(druid_shell::WindowState::Maximized);
+            .set_window_state(druid_shell::WindowState::Maximized)
+            .set_always_on_top(true);
         ctx.new_window(window);
     }
 }
@@ -184,64 +185,39 @@ pub fn show_screen(image: ImageBuf) -> impl Widget<Screenshot> {
     let mut row = Flex::row();
     let mut row2 = Flex::row();
 
+    let mut sizedbox = SizedBox::new(img).width(1400.).height(750.);
+
     let ruota_button =
         Button::new("🔄").on_click(move |ctx: &mut EventCtx, _data: &mut Screenshot, _env| {
             // transform::rotate(img, 45, rasterColor::rgb(0, 0, 0));
         });
-    let crop_button = Button::new("ritaglia");
+    let crop_button = Button::new("ritaglia").on_click(move |ctx: &mut EventCtx, _data: &mut Screenshot, _env| {
+        let mut current = ctx.window().clone();
+        current.set_window_state(WindowState::Minimized);
+        // data.window_minimized = true;
+        // let background_color = Color::rgba(0.0, 0.0, 0.0, 0.5);
+        let new_win = WindowDesc::new(
+            // Container::new(draw_rect())
+            //     .background(background_color)
+            //     .center(),
+            draw_rect(),
+        )
+        .show_titlebar(false)
+        .transparent(true)
+        .window_size((1000., 1000.))
+        .resizable(false)
+        .set_position((0.0, 0.0));
+
+        ctx.new_window(new_win);});
 
     row.add_child(ruota_button);
     row.add_child(crop_button);
     col.add_child(row);
-    row2.add_child(SizedBox::new(img).width(900.).height(900.));
+    row2.add_child(sizedbox);
     col.add_child(row2);
     col
 }
 
-// Funzione per ruotare un ImageBuf di Druid utilizzando trasformazioni matriciali
-fn rotate_image(image_buf: &ImageBuf, angle_degrees: f64) -> ImageBuf {
-    let width = image_buf.width();
-    let height = image_buf.height();
-
-    // Calcola il centro dell'immagine
-    let center_x = width as f64 / 2.0;
-    let center_y = height as f64 / 2.0;
-
-    // Converti l'angolo da gradi a radianti
-    let angle_radians = angle_degrees.to_radians();
-
-    // Crea una matrice di trasformazione per la rotazione
-    let rotation_matrix = Matrix3::new_rotation(angle_radians);
-
-    // Crea un nuovo ImageBuf con le stesse dimensioni
-    let mut rotated_image_buf = ImageBuf::new(width, height);
-
-    // Itera su ogni pixel nell'immagine originale
-    for x in 0..width {
-        for y in 0..height {
-            // Calcola le coordinate del pixel nell'immagine ruotata
-            let (new_x, new_y) = rotate_point(x as f64, y as f64, center_x, center_y, &rotation_matrix);
-
-            // Copia il colore del pixel originale nell'immagine ruotata
-            if let Some(color) = image_buf.get_pixel(new_x as usize, new_y as usize) {
-                rotated_image_buf.set_pixel(x as usize, y as usize, color);
-            }
-        }
-    }
-
-    rotated_image_buf
-}
-
-// Funzione per ruotare un punto utilizzando una matrice di trasformazione
-fn rotate_point(x: f64, y: f64, center_x: f64, center_y: f64, matrix: &Matrix3<f64>) -> (f64, f64) {
-    let mut point = Matrix3::new_translation(-center_x, -center_y) * matrix * Matrix3::new_translation(center_x, center_y)
-        * Matrix3::new_translation(x, y);
-
-    point.x /= point.z;
-    point.y /= point.z;
-
-    (point.x, point.y)
-}
 
 pub fn draw_rect() -> impl Widget<Screenshot> {
     let paint = Painter::new(|ctx: &mut PaintCtx<'_, '_, '_>, data: &Screenshot, _env| {
@@ -250,21 +226,7 @@ pub fn draw_rect() -> impl Widget<Screenshot> {
         ctx.fill(rect, &Color::rgba(0.0, 0.0, 0.0, data.area_transparency));
         // ctx.stroke(rect, &druid::Color::RED, 0.8);
     })
-    .controller(MouseClickDragController {})
-    .controller(ScreenArea {})
-    .center();
-
-    Flex::column().with_child(paint)
-}
-
-pub fn empty_window() -> impl Widget<Screenshot> {
-    let paint = Painter::new(|ctx: &mut PaintCtx<'_, '_, '_>, data: &Screenshot, _env| {
-        let (start, end) = (data.area.start, data.area.end);
-        let rect = druid::Rect::from_points(start, end);
-        ctx.fill(rect, &Color::rgba(0.0, 0.0, 0.0, data.area_transparency));
-    })
-    .controller(SetScreen {})
-    .controller(ScreenArea {})
+    .controller(MouseClickDragController {t1: TimerToken::next() })
     .center();
 
     Flex::column().with_child(paint)

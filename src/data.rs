@@ -9,9 +9,6 @@ use image::*;
 use screenshots::Screen;
 use serde::{Deserialize, Serialize};
 
-use std::time::Duration;
-use tokio::time;
-
 #[derive(Clone, Data, PartialEq, Debug, Serialize, Deserialize)]
 pub enum Format {
     MainFormat,
@@ -92,15 +89,13 @@ impl Screenshot {
     }
 
     pub fn do_screen(&mut self) {
+        let screens = Screen::all().unwrap();
+        let image: ImageBuffer<Rgba<u8>, Vec<u8>> = screens[0].capture().unwrap();
+        let time: String = chrono::offset::Utc::now().to_string();
 
-        // tokio::spawn(async {
-            // tokio::time::sleep(Duration::from_secs(2)).await;
-            let screens = Screen::all().unwrap();
-            let image: ImageBuffer<Rgba<u8>, Vec<u8>> = screens[0].capture().unwrap();
-            let time: String = chrono::offset::Utc::now().to_string();
-            self.format = Format::MainFormat; //default
-            self.name = time;
-            self.name = self
+        self.format = Format::MainFormat; //default
+        self.name = time;
+        self.name = self
             .name
             .replace(".", "-")
             .replace(":", "-")
@@ -115,27 +110,6 @@ impl Screenshot {
         );
         self.screen_fatto = true;
         self.area_transparency = 0.4;
-        // });
-        
-
-        // self.format = Format::MainFormat; //default
-        // self.name = time;
-        // self.name = self
-        //     .name
-        //     .replace(".", "-")
-        //     .replace(":", "-")
-        //     .replace(" ", "_");
-        // self.name += &self.format.to_string();
-
-        // self.img = ImageBuf::from_raw(
-        //     image.clone().into_raw(),
-        //     druid::piet::ImageFormat::RgbaPremul,
-        //     image.clone().width() as usize,
-        //     image.clone().height() as usize,
-        // );
-
-        // self.screen_fatto = true;
-        // self.area_transparency = 0.4;
     }
 
     pub fn do_screen_area(&mut self) {

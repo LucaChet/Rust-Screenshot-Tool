@@ -64,6 +64,7 @@ pub struct Screenshot {
     pub area_transparency: f64,
     pub flag_selection: bool, //serve per fare far partire il controller solo dopo aver acquisito l'area
     pub full_screen: bool,
+    pub time_interval: f64,
 }
 
 impl Screenshot {
@@ -79,6 +80,7 @@ impl Screenshot {
             area_transparency: 0.4,
             flag_selection: false,
             full_screen: false,
+            time_interval: 0.0,
         }
     }
 
@@ -226,7 +228,7 @@ pub fn draw_rect() -> impl Widget<Screenshot> {
         ctx.fill(rect, &Color::rgba(0.0, 0.0, 0.0, data.area_transparency));
         // ctx.stroke(rect, &druid::Color::RED, 0.8);
     })
-    .controller(MouseClickDragController {t1: TimerToken::next() })
+    .controller(MouseClickDragController {t1: TimerToken::next(), t2: TimerToken::next() })
     .center();
 
     Flex::column().with_child(paint)

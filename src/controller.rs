@@ -1,8 +1,8 @@
-use std::time::Duration;
 use druid::{
     commands, AppDelegate, Code, Command, Cursor, DelegateCtx, Env, Event, EventCtx, Handled,
-    MouseButton, Point, Target, Widget,
+    MouseButton, Point, Target, Widget, WindowState,
 };
+use std::time::Duration;
 
 use druid::widget::Controller;
 use druid_shell::TimerToken;
@@ -48,7 +48,6 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for SetScreen {
         child.update(ctx, old_data, data, env)
     }
 }
-
 
 pub struct Enter;
 
@@ -96,8 +95,9 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Enter {
     }
 }
 
-pub struct MouseClickDragController{
+pub struct MouseClickDragController {
     pub t1: TimerToken,
+    pub t2: TimerToken, //usato per il delay
 }
 
 impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragController {
@@ -109,101 +109,121 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
         data: &mut Screenshot,
         env: &Env,
     ) {
-        if data.full_screen == false{
-        match event {
-            Event::MouseDown(mouse_event) => {
-                if mouse_event.button == MouseButton::Left {
-                    // Esegui qualcosa quando viene premuto il pulsante sinistro del mouse.
-                    // Ad esempio, puoi iniziare a trascinare un elemento.
-                    // Inizia a tenere traccia del punto in cui è iniziato il trascinamento.
-
-                    ctx.set_cursor(&Cursor::Crosshair);
-                    let start_point = mouse_event.pos;
-
-                    ctx.set_active(true);
-                    // ctx.set_handled();
-
-                    // Memorizza il punto iniziale nel data del widget o in un altro stato.
-                    data.area.start = start_point;
-                    data.area.end = start_point;
-                }
-            }
-            Event::MouseUp(mouse_event) => {
-                if mouse_event.button == MouseButton::Left && ctx.is_active() {
-                    // Esegui qualcosa quando viene rilasciato il pulsante sinistro del mouse.
-                    // Ad esempio, puoi terminare il trascinamento.
-
-                    data.area_transparency = 0.0;
-                    data.flag_selection = true;
-                    self.t1 = ctx.request_timer(Duration::from_millis(500));
-
-                    ctx.set_active(false);
-                    // ctx.set_handled();
-
-                    // Calcola il punto finale del trascinamento e fai qualcosa con esso.
-                    let end_point = mouse_event.pos;
-                    data.area.end = end_point;
-
-                    if mouse_event.pos.x < data.area.start.x {
-                        data.area.start.x = mouse_event.pos.x;
-                    }
-                    if mouse_event.pos.y < data.area.start.y {
-                        data.area.start.y = mouse_event.pos.y;
-                    }
-
-                    ctx.set_cursor(&Cursor::Arrow);
-                }
-            }
-            Event::MouseMove(mouse_event) => {
-                if ctx.is_active() {
-                    // Esegui qualcosa quando il mouse viene spostato durante il trascinamento.
-                    // Ad esempio, aggiorna la posizione dell'elemento trascinato.
-                    let end_point = mouse_event.pos;
-                    data.area.end = end_point;
-                    // Calcola la differenza tra la posizione attuale e quella iniziale.
-
-                    let deltax = (mouse_event.pos.x - data.area.start.x).abs() * data.area.scale;
-                    let deltay = (mouse_event.pos.y - data.area.start.y).abs() * data.area.scale;
-
-                    data.area.width = (deltax).abs();
-                    data.area.heigth = (deltay).abs();
-
-                    // ctx.request_paint();
-                }
-            }
-            Event::Timer(id) => {
-                if self.t1 == *id && data.flag_selection{
-                    if data.area.width != 0.0 && data.area.heigth != 0.0 {
-                        data.do_screen_area();
-                        // data.area_transparency = 0.4;
-                    }
-                    data.area.start = Point::new(0.0, 0.0);
-                    data.area.end = Point::new(0.0, 0.0);
-                    data.flag_selection = false;
-                    data.screen_window(ctx);
-                    ctx.window().close();
-                }
-            }
+        if data.full_screen == false {
+            let mut current = ctx.window().clone();
             
-
-            _ => {}
-        }
-    }else if data.full_screen{
-        self.t1 = ctx.request_timer(Duration::from_millis(500));
-        match event {
-            Event::Timer(id) => {
-                if self.t1 == *id{
-                    data.do_screen();
-                    data.area.start = Point::new(0.0, 0.0);
-                    data.area.end = Point::new(0.0, 0.0);
-                    data.screen_window(ctx);
-                    ctx.window().close();
-                }
+            if data.time_interval > 0.0 {
+                self.t1 = ctx.request_timer(Duration::from_secs(data.time_interval as u64));
+                current.set_window_state(WindowState::Minimized);
+            }else{
+                ctx.set_cursor(&Cursor::Crosshair);
             }
+            match event {
+                Event::MouseDown(mouse_event) => {
+                    if mouse_event.button == MouseButton::Left {
+                        // Esegui qualcosa quando viene premuto il pulsante sinistro del mouse.
+                        // Ad esempio, puoi iniziare a trascinare un elemento.
+                        // Inizia a tenere traccia del punto in cui è iniziato il trascinamento.
 
-            _ => {}
+                        // ctx.set_cursor(&Cursor::Crosshair);
+                        let start_point = mouse_event.pos;
+
+                        ctx.set_active(true);
+                        // ctx.set_handled();
+
+                        // Memorizza il punto iniziale nel data del widget o in un altro stato.
+                        data.area.start = start_point;
+                        data.area.end = start_point;
+                    }
+                }
+                Event::MouseUp(mouse_event) => {
+                    if mouse_event.button == MouseButton::Left && ctx.is_active() {
+                        // Esegui qualcosa quando viene rilasciato il pulsante sinistro del mouse.
+                        // Ad esempio, puoi terminare il trascinamento.
+
+                        data.area_transparency = 0.0;
+                        data.flag_selection = true;
+                        self.t1 = ctx.request_timer(Duration::from_millis(500));
+
+                        ctx.set_active(false);
+                        // ctx.set_handled();
+
+                        // Calcola il punto finale del trascinamento e fai qualcosa con esso.
+                        let end_point = mouse_event.pos;
+                        data.area.end = end_point;
+
+                        if mouse_event.pos.x < data.area.start.x {
+                            data.area.start.x = mouse_event.pos.x;
+                        }
+                        if mouse_event.pos.y < data.area.start.y {
+                            data.area.start.y = mouse_event.pos.y;
+                        }
+
+                        ctx.set_cursor(&Cursor::Arrow);
+                    }
+                }
+                Event::MouseMove(mouse_event) => {
+                    if ctx.is_active() {
+                        // Esegui qualcosa quando il mouse viene spostato durante il trascinamento.
+                        // Ad esempio, aggiorna la posizione dell'elemento trascinato.
+                        let end_point = mouse_event.pos;
+                        data.area.end = end_point;
+                        // Calcola la differenza tra la posizione attuale e quella iniziale.
+
+                        let deltax =
+                            (mouse_event.pos.x - data.area.start.x).abs() * data.area.scale;
+                        let deltay =
+                            (mouse_event.pos.y - data.area.start.y).abs() * data.area.scale;
+
+                        data.area.width = (deltax).abs();
+                        data.area.heigth = (deltay).abs();
+
+                        // ctx.request_paint();
+                    }
+                }
+                Event::Timer(id) => {
+                    if self.t1 == *id && data.flag_selection {
+                        if data.area.width != 0.0 && data.area.heigth != 0.0 {
+                            data.do_screen_area();
+                            // data.area_transparency = 0.4;
+                        }
+                        data.area.start = Point::new(0.0, 0.0);
+                        data.area.end = Point::new(0.0, 0.0);
+                        data.flag_selection = false;
+                        data.screen_window(ctx);
+                        ctx.window().close();
+                    }
+                    else if self.t1 == *id{
+                        data.time_interval = 0.0;
+                        ctx.set_cursor(&Cursor::Crosshair);
+                        current.set_window_state(WindowState::Restored);
+                    }
+                }
+
+                _ => {}
+            }
+        } else if data.full_screen {
+            let mut current = ctx.window().clone();
+            current.set_window_state(WindowState::Minimized);
+            if data.time_interval < 0.5 {
+                self.t1 = ctx.request_timer(Duration::from_millis(500));
+            } else {
+                self.t1 = ctx.request_timer(Duration::from_secs(data.time_interval as u64));
+            }
+            match event {
+                Event::Timer(id) => {
+                    if self.t1 == *id {
+                        data.do_screen();
+                        data.area.start = Point::new(0.0, 0.0);
+                        data.area.end = Point::new(0.0, 0.0);
+                        data.screen_window(ctx);
+                        ctx.window().close();
+                    }
+                }
+
+                _ => {}
+            }
         }
-    }
 
         child.event(ctx, event, data, env);
     }

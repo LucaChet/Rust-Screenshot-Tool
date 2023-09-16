@@ -1,12 +1,11 @@
-use std::time::Duration;
-
 use druid::widget::{
-    Button, CrossAxisAlignment, Either, Flex, FlexParams, Label, Padding, TextBox, ZStack,
+    Button, CrossAxisAlignment, Either, Flex, FlexParams, Label, Padding, Painter, Stepper,
+    TextBox, ZStack,
 };
 
 use druid::{
-    Env, EventCtx, FileDialogOptions, FileSpec, UnitPoint, Widget, WidgetExt, WindowDesc,
-    WindowState,
+    Color, Data, Env, EventCtx, FileDialogOptions, FileSpec, RenderContext, UnitPoint, Widget,
+    WidgetExt, WindowDesc, WindowState,
 };
 
 use druid_widget_nursery::DropdownSelect;
@@ -47,7 +46,7 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
                     let mut current = ctx.window().clone();
                     current.set_window_state(WindowState::Minimized);
                     data.full_screen = false;
-                    
+
                     let new_win = WindowDesc::new(draw_rect())
                         .show_titlebar(false)
                         .transparent(true)
@@ -59,6 +58,18 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
                 },
             )),
     );
+
+    let timer_box = Stepper::new()
+        .with_range(0.0, 100.0)
+        .with_step(1.0)
+        .lens(Screenshot::time_interval);
+
+    let label_timer = Label::new(|data: &Screenshot, _: &Env| format!("Delay timer: {}", data.time_interval));
+
+    let mut row_timer = Flex::row()
+        .with_child(label_timer)
+        .with_spacer(1.0)
+        .with_child(timer_box);
 
     let mut row = Flex::row();
 
@@ -143,10 +154,13 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
 
     col.add_default_spacer();
 
-    // // col.add_child(row);
+    // col.add_child(label_widget(row_timer, "Delay Timer"));
+    // col.add_child(row);
     // col.add_child(row2);
     // col
 
     ZStack::new(col.with_flex_child(row, FlexParams::new(1.0, CrossAxisAlignment::Start)))
+        .with_aligned_child(Padding::new(5., row_timer), UnitPoint::TOP_LEFT)
         .with_aligned_child(Padding::new(5., row2), UnitPoint::BOTTOM_RIGHT)
 }
+

@@ -97,7 +97,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Enter {
 
 pub struct MouseClickDragController {
     pub t1: TimerToken,
-    pub t2: TimerToken, //usato per il delay
+    pub flag: bool,
 }
 
 impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragController {
@@ -205,10 +205,14 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
         } else if data.full_screen {
             let mut current = ctx.window().clone();
             current.set_window_state(WindowState::Minimized);
-            if data.time_interval < 0.5 {
+            
+            if data.time_interval < 0.5 && self.flag{
                 self.t1 = ctx.request_timer(Duration::from_millis(500));
-            } else {
+                self.flag = false;
+                
+            } else if self.flag{
                 self.t1 = ctx.request_timer(Duration::from_secs(data.time_interval as u64));
+                self.flag = false;                
             }
             match event {
                 Event::Timer(id) => {
@@ -216,6 +220,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
                         data.do_screen();
                         data.area.start = Point::new(0.0, 0.0);
                         data.area.end = Point::new(0.0, 0.0);
+                        self.flag=true;
                         data.screen_window(ctx);
                         ctx.window().close();
                     }

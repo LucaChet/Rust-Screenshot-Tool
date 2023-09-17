@@ -228,7 +228,7 @@ pub fn draw_rect() -> impl Widget<Screenshot> {
         ctx.fill(rect, &Color::rgba(0.0, 0.0, 0.0, data.area_transparency));
         // ctx.stroke(rect, &druid::Color::RED, 0.8);
     })
-    .controller(MouseClickDragController {t1: TimerToken::next(), t2: TimerToken::next() })
+    .controller(MouseClickDragController {t1: TimerToken::next(), flag: true })
     .center();
 
     Flex::column().with_child(paint)

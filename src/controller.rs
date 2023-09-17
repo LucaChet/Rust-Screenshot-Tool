@@ -112,10 +112,12 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
         if data.full_screen == false {
             let mut current = ctx.window().clone();
             
-            if data.time_interval > 0.0 {
+            if data.time_interval > 0.0 && self.flag{
                 self.t1 = ctx.request_timer(Duration::from_secs(data.time_interval as u64));
+                self.flag = false;
                 current.set_window_state(WindowState::Minimized);
-            }else{
+            }else if self.flag {
+                self.flag = false;
                 ctx.set_cursor(&Cursor::Crosshair);
             }
             match event {
@@ -185,7 +187,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
                     if self.t1 == *id && data.flag_selection {
                         if data.area.width != 0.0 && data.area.heigth != 0.0 {
                             data.do_screen_area();
-                            // data.area_transparency = 0.4;
+                            self.flag = true;
                         }
                         data.area.start = Point::new(0.0, 0.0);
                         data.area.end = Point::new(0.0, 0.0);
@@ -193,7 +195,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
                         data.screen_window(ctx);
                         ctx.window().close();
                     }
-                    else if self.t1 == *id{
+                    else if self.t1 == *id{  //posso selezionare dopo tot secondi
                         data.time_interval = 0.0;
                         ctx.set_cursor(&Cursor::Crosshair);
                         current.set_window_state(WindowState::Restored);

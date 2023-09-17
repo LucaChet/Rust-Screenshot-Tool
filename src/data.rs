@@ -1,7 +1,8 @@
 use druid::{
-    widget::{Button, FillStrat, Flex, Image, Painter, SizedBox},
-    Rect, Color, Data, EventCtx, ImageBuf, Lens, PaintCtx, Point, RenderContext, Widget, WidgetExt,
-    WindowDesc, WindowState, CursorDesc, TimerToken
+    widget::{Button, FillStrat, Flex, Image, Painter, SizedBox, Controller, Container},
+    WidgetPod, Color, CursorDesc, Data, EventCtx, ImageBuf, Lens, PaintCtx, Point, Rect, RenderContext,
+    TimerToken, Widget, WidgetExt, WindowDesc, WindowState, Env, Event, LifeCycle, LifeCycleCtx, UpdateCtx, Size,
+    LayoutCtx, BoxConstraints
 };
 // use druid_shell::{TimerToken};
 
@@ -65,6 +66,8 @@ pub struct Screenshot {
     pub flag_selection: bool, //serve per fare far partire il controller solo dopo aver acquisito l'area
     pub full_screen: bool,
     pub time_interval: f64,
+    pub flag_resize: bool, //usato per mostrare screen in show_screen durante il resize
+    pub rect: Rect,
 }
 
 impl Screenshot {
@@ -81,6 +84,8 @@ impl Screenshot {
             flag_selection: false,
             full_screen: false,
             time_interval: 0.0,
+            flag_resize: false,
+            rect: Rect::new(100.0, 100.0, 200.0, 200.0),
         }
     }
 
@@ -93,7 +98,6 @@ impl Screenshot {
     }
 
     pub fn do_screen(&mut self) {
-        
         let screens = Screen::all().unwrap();
         let image: ImageBuffer<Rgba<u8>, Vec<u8>> = screens[0].capture().unwrap();
         let time: String = chrono::offset::Utc::now().to_string();
@@ -120,6 +124,7 @@ impl Screenshot {
     pub fn do_screen_area(&mut self) {
         // println!("{}", self.area_transparency);
         let screen = Screen::from_point(0, 0).unwrap();
+
         let image = screen
             .capture_area(
                 ((self.area.start.x) * self.area.scale) as i32,
@@ -128,6 +133,7 @@ impl Screenshot {
                 (self.area.heigth) as u32,
             )
             .unwrap();
+
         self.format = Format::MainFormat; //default
         self.name = chrono::offset::Utc::now().to_string();
         self.name = self
@@ -149,7 +155,7 @@ impl Screenshot {
     }
 
     pub fn screen_window(&mut self, ctx: &mut EventCtx) {
-        let window = WindowDesc::new(show_screen(self.img.clone()))
+        let window = WindowDesc::new(show_screen(ctx, self.img.clone(), self))
             .title(self.name.clone())
             .set_window_state(druid_shell::WindowState::Maximized)
             .set_always_on_top(true);
@@ -157,69 +163,80 @@ impl Screenshot {
     }
 }
 
-pub fn show_screen(image: ImageBuf) -> impl Widget<Screenshot> {
-    let mut img = Image::new(image).fill_mode(FillStrat::ScaleDown);
-    // img.set_clip_area(
-    //     Some(Rect::new(10.0, 10.0, 300.0, 300.0))
-    // );
+pub fn show_screen(
+    ctx: &mut EventCtx,
+    image: ImageBuf,
+    data: &mut Screenshot,
+) -> impl Widget<Screenshot> {
+    // println!("x:{},  y:{}", data.area.start.x, data.area.start.y);
 
-    // let (w, h) = (image.width(), image.height());
-
-    // let mut img2 = rasterImage::blank(w as i32, h as i32);
-
-    // let mut x = 0;
-    // let mut y = 0;
-    // let rows = image.pixel_colors();
-    // for row in rows {
-    //     for color in row {
-    //         let (r, g, b, a) = color.as_rgba();
-    //         let color2 = rasterColor::rgba(
-    //             (r * 255.0) as u8,
-    //             (g * 255.0) as u8,
-    //             (b * 255.0) as u8,
-    //             (a * 255.0) as u8,
-    //         );
-    //         img2.set_pixel(x, y, color2);
-    //         x = (x + 1) % w as i32;
-    //     }
-    //     y = y + 1;
-    // }
-
+    let mut img = Image::new(image.clone()).fill_mode(FillStrat::ScaleDown);
+    // let copia_img = Image::new(image.clone()).fill_mode(FillStrat::ScaleDown);
 
     let mut col = Flex::column();
+
+    if data.area.width != 0.0 && data.area.heigth != 0.0 && data.flag_resize == false {
+        img.set_clip_area(Some(Rect::new(
+            data.area.start.x * data.area.scale,
+            data.area.start.y * data.area.scale,
+            (data.area.start.x * data.area.scale) + data.area.width,
+            (data.area.start.y * data.area.scale) + data.area.heigth,
+        )));
+    } 
+    // else if data.flag_resize {
+    //     // let displays = screenshots::DisplayInfo::all().expect("error");
+    //     // let scale = displays[0].scale_factor as f64;
+    //     // let width = displays[0].width as f64 * scale;
+    //     // let height = displays[0].height as f64 * scale;
+    //     // let new_win = WindowDesc::new(draw_rect_resize())
+    //     //     .show_titlebar(false)
+    //     //     .transparent(true)
+    //     //     .window_size((data.area.width, data.area.heigth))
+    //     //     .resizable(true)
+    //     //     .set_position((0.0, 0.0))
+    //     //     .set_always_on_top(true);
+
+    //     // ctx.new_window(new_win);
+    //     col.add_child(draw_rect_resize());
+    // }
+
+    
     let mut row = Flex::row();
     let mut row2 = Flex::row();
 
-    let mut sizedbox = SizedBox::new(img).width(1400.).height(750.);
+    let sizedbox = SizedBox::new(img).width(1200.).height(700.);
 
-    let ruota_button =
-        Button::new("🔄").on_click(move |ctx: &mut EventCtx, _data: &mut Screenshot, _env| {
-            // transform::rotate(img, 45, rasterColor::rgb(0, 0, 0));
+    let resize_button =
+        Button::new("resize").on_click(move |ctx: &mut EventCtx, data: &mut Screenshot, _env| {
+            // data.flag_resize = true;
+            // data.screen_window(ctx);
+            // ctx.window().clone().close();
+
+            let displays = screenshots::DisplayInfo::all().expect("error");
+        let scale = displays[0].scale_factor as f64;
+        let width = displays[0].width as f64 * scale;
+        let height = displays[0].height as f64 * scale;
+            let new_win = WindowDesc::new(draw_rect_resize(ctx, image.clone(), &mut data.clone()))
+                .title("Image Crop")
+                .window_size((width, height))
+                .set_position((0.0, 0.0))
+                .show_titlebar(true);
+
+            ctx.new_window(new_win);
         });
-    let crop_button = Button::new("ritaglia").on_click(move |ctx: &mut EventCtx, _data: &mut Screenshot, _env| {
-        // let mut current = ctx.window().clone();
-        // current.set_window_state(WindowState::Minimized);
 
-        // let new_win = WindowDesc::new(
-        //     draw_rect()
-        // )
-        // .show_titlebar(false)
-        // .transparent(true)
-        // .window_size((1000., 1000.))
-        // .resizable(false)
-        // .set_position((0.0, 0.0));
-
-        // ctx.new_window(new_win);
-    });
-    
-    row.add_child(ruota_button);
-    row.add_child(crop_button);
+    row.add_child(resize_button);
     col.add_child(row);
+
     row2.add_child(sizedbox);
     col.add_child(row2);
+
+    // if data.flag_resize{
+    //     col.add_child(rect);
+    // }
+    
     col
 }
-
 
 pub fn draw_rect() -> impl Widget<Screenshot> {
     let paint = Painter::new(|ctx: &mut PaintCtx<'_, '_, '_>, data: &Screenshot, _env| {
@@ -228,8 +245,124 @@ pub fn draw_rect() -> impl Widget<Screenshot> {
         ctx.fill(rect, &Color::rgba(0.0, 0.0, 0.0, data.area_transparency));
         // ctx.stroke(rect, &druid::Color::RED, 0.8);
     })
-    .controller(MouseClickDragController {t1: TimerToken::next(), flag: true })
+    .controller(MouseClickDragController {
+        t1: TimerToken::next(),
+        flag: true,
+    })
     .center();
 
     Flex::column().with_child(paint)
 }
+
+// pub fn draw_rect_resize() -> impl Widget<Screenshot> {
+//     let paint = Painter::new(|ctx: &mut PaintCtx<'_, '_, '_>, data: &Screenshot, _env| {
+//         // let (start, end) = (data.area.start, data.area.end);
+//         let rect = Rect::new(
+//             data.area.start.x * data.area.scale,
+//             data.area.start.y * data.area.scale,
+//             (data.area.start.x * data.area.scale) + data.area.width,
+//             (data.area.start.y * data.area.scale) + data.area.heigth,
+//         );
+
+//         ctx.fill(rect, &Color::rgba(100.0, 100.0, 100.0, 0.4));
+//         ctx.stroke(rect, &druid::Color::RED, 1.0);
+//     })
+//     // .controller(MouseClickDragController {
+//     //     t1: TimerToken::next(),
+//     //     flag: true,
+//     // })
+//     .center();
+
+//     // Flex::row().with_child(paint)
+//     // WidgetPod::new(paint)
+//     paint
+//     // .fill_strategy(FillStrat::Fill)
+// }
+
+// Funzione per la finestra di ritaglio
+fn draw_rect_resize(ctx: &mut EventCtx, image: ImageBuf, data: &mut Screenshot) -> impl Widget<Screenshot> {
+    // Crea una widget tree con l'immagine e il rettangolo ridimensionabile
+    let mut flex = Flex::row();
+    
+    // Crea l'immagine di sfondo
+    let mut img = Image::new(image.clone()).fill_mode(FillStrat::ScaleDown);
+    // Imposta il clip area per il rettangolo di ritaglio
+    // img.set_clip_area(Some(Rect::ZERO)); // Puoi inizializzare con un rettangolo vuoto
+
+    // Aggiungi l'immagine e il rettangolo alla widget tree
+    flex.add_child(SizedBox::new(img).width(1000.).height(600.));
+    // Aggiungi qui il rettangolo ridimensionabile, ad esempio utilizzando un widget personalizzato
+    // let resizable_rect = ResizableRect::new(Rect::ZERO); // Inizializza con un rettangolo vuoto
+    let rect = Rect::new(50.0, 50.0, 50.0, 50.0); // Crea un rettangolo con coordinate (50, 50) e dimensioni 200x150
+    let resizable_rect = ResizableRect::new(rect);
+    flex.add_child(resizable_rect);
+
+    // Restituisci la widget tree
+    flex
+}
+
+// Definisci un nuovo widget per il rettangolo ridimensionabile
+pub struct ResizableRect {
+    rect: Rect,
+    resizing: bool,
+}
+
+impl ResizableRect {
+    pub fn new(rect: Rect) -> Self {
+        ResizableRect {
+            rect,
+            resizing: false,
+        }
+    }
+}
+
+impl Widget<Screenshot> for ResizableRect {
+    fn event(
+        &mut self,
+        ctx: &mut EventCtx,
+        event: &Event,
+        _data: &mut Screenshot,
+        _env: &Env,
+    ) {
+        match event {
+            Event::MouseDown(mouse_event) if self.rect.contains(mouse_event.pos) => {
+                self.resizing = true;
+            }
+            Event::MouseUp(_) => {
+                self.resizing = false;
+            }
+            Event::MouseMove(mouse_event) if self.resizing => {
+                // Ridimensiona il rettangolo in base al movimento del mouse
+                self.rect = Rect::from_points(self.rect.origin(), mouse_event.pos);
+                ctx.request_paint();
+            }
+            _ => (),
+        }
+    }
+
+    fn paint(&mut self, ctx: &mut PaintCtx, _data: &Screenshot, _env: &Env) {
+        // Disegna il rettangolo
+        ctx.fill(self.rect, &Color::rgba(0.0, 0.0, 1.0, 0.5));
+        ctx.stroke(self.rect, &Color::rgb(0.0, 0.0, 0.0), 2.0);
+    }
+
+    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _ev: &LifeCycle, _data: &Screenshot, _env: &Env) {}
+
+    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &Screenshot, _data: &Screenshot, _env: &Env) {}
+
+    fn layout(
+        &mut self,
+        _layout_ctx: &mut LayoutCtx,
+        _bc: &BoxConstraints,
+        _data: &Screenshot,
+        _env: &Env,
+    ) -> Size {
+        Size::new(self.rect.width(), self.rect.height())
+    }
+
+}
+
+
+
+
+

@@ -186,19 +186,18 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
                 Event::Timer(id) => {
                     if self.t1 == *id && data.flag_selection {
                         if data.area.width != 0.0 && data.area.heigth != 0.0 {
-                            data.do_screen_area();
+                            data.do_screen();  //dovrebbe essere do_screen_area -> cambio per prova
                             self.flag = true;
                         }
-                        data.area.start = Point::new(0.0, 0.0);
-                        data.area.end = Point::new(0.0, 0.0);
                         data.flag_selection = false;
                         data.screen_window(ctx);
                         ctx.window().close();
                     }
                     else if self.t1 == *id{  //posso selezionare dopo tot secondi
                         data.time_interval = 0.0;
-                        ctx.set_cursor(&Cursor::Crosshair);
+                        current.set_always_on_top(true);
                         current.set_window_state(WindowState::Restored);
+                        ctx.set_cursor(&Cursor::Crosshair);
                     }
                 }
 
@@ -220,8 +219,6 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
                 Event::Timer(id) => {
                     if self.t1 == *id {
                         data.do_screen();
-                        data.area.start = Point::new(0.0, 0.0);
-                        data.area.end = Point::new(0.0, 0.0);
                         self.flag=true;
                         data.screen_window(ctx);
                         ctx.window().close();

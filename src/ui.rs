@@ -4,7 +4,7 @@ use druid::widget::{
 };
 
 use druid::{
-    Color, Data, Env, EventCtx, FileDialogOptions, FileSpec, RenderContext, UnitPoint, Widget,
+    Point, Color, Data, Env, EventCtx, FileDialogOptions, FileSpec, RenderContext, UnitPoint, Widget,
     WidgetExt, WindowDesc, WindowState,
 };
 
@@ -30,6 +30,12 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
                     current.set_window_state(WindowState::Minimized);
                     data.full_screen = true;
 
+                    data.area.start = Point::new(0.0, 0.0);
+                    data.area.end = Point::new(0.0, 0.0);
+                    data.area.width = 0.0;
+                    data.area.heigth = 0.0;
+                    data.flag_resize = false;
+
                     let new_win = WindowDesc::new(draw_rect())
                         .show_titlebar(false)
                         .transparent(true)
@@ -46,6 +52,12 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
                     let mut current = ctx.window().clone();
                     current.set_window_state(WindowState::Minimized);
                     data.full_screen = false;
+
+                    data.area.start = Point::new(0.0, 0.0);
+                    data.area.end = Point::new(0.0, 0.0);
+                    data.area.width = 0.0;
+                    data.area.heigth = 0.0;
+                    data.flag_resize = false;
 
                     let new_win = WindowDesc::new(draw_rect())
                         .show_titlebar(false)
@@ -64,9 +76,10 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
         .with_step(1.0)
         .lens(Screenshot::time_interval);
 
-    let label_timer = Label::new(|data: &Screenshot, _: &Env| format!("Delay timer: {}", data.time_interval));
+        
+    let label_timer = Label::new(|data: &Screenshot, _: &Env| format!("⌛Delay timer: {} secondi", data.time_interval));
 
-    let mut row_timer = Flex::row()
+    let row_timer = Flex::row()
         .with_child(label_timer)
         .with_spacer(1.0)
         .with_child(timer_box);

@@ -128,6 +128,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
                         // Inizia a tenere traccia del punto in cui è iniziato il trascinamento.
 
                         // ctx.set_cursor(&Cursor::Crosshair);
+                        
                         let start_point = mouse_event.pos;
 
                         ctx.set_active(true);
@@ -143,7 +144,12 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
                         // Esegui qualcosa quando viene rilasciato il pulsante sinistro del mouse.
                         // Ad esempio, puoi terminare il trascinamento.
 
-                        data.area_transparency = 0.0;
+                        data.flag_transparency = true;
+
+                        data.area.rgba.r = 0.0;
+                        data.area.rgba.g = 0.0;
+                        data.area.rgba.b = 0.0;
+                        data.area.rgba.a = 0.0;
                         data.flag_selection = true;
                         self.t1 = ctx.request_timer(Duration::from_millis(500));
 
@@ -186,7 +192,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
                 Event::Timer(id) => {
                     if self.t1 == *id && data.flag_selection {
                         if data.area.width != 0.0 && data.area.heigth != 0.0 {
-                            data.do_screen();  //dovrebbe essere do_screen_area -> cambio per prova
+                            data.do_screen_area();  //dovrebbe essere do_screen_area -> cambio per prova
                             self.flag = true;
                         }
                         data.flag_selection = false;

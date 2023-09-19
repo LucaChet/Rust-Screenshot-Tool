@@ -1,5 +1,5 @@
 use druid::widget::{
-    Button, CrossAxisAlignment, Either, Flex, FlexParams, Label, Padding, Painter, Stepper,
+    Container, Button, CrossAxisAlignment, Either, Flex, FlexParams, Label, Padding, Painter, Stepper,
     TextBox, ZStack,
 };
 
@@ -34,7 +34,7 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
                     data.area.end = Point::new(0.0, 0.0);
                     data.area.width = 0.0;
                     data.area.heigth = 0.0;
-                    data.flag_resize = false;
+                    data.area.rgba.reset();
 
                     let new_win = WindowDesc::new(draw_rect())
                         .show_titlebar(false)
@@ -57,9 +57,15 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
                     data.area.end = Point::new(0.0, 0.0);
                     data.area.width = 0.0;
                     data.area.heigth = 0.0;
-                    data.flag_resize = false;
+                    data.area.rgba.reset();
 
-                    let new_win = WindowDesc::new(draw_rect())
+                    let container = Either::new(
+                        |data: &Screenshot, _: &Env| data.flag_transparency,
+                        Container::new(draw_rect()).background(Color::rgba(0.0, 0.0, 0.0, 0.0)),
+                        Container::new(draw_rect()).background(Color::rgba(0.0, 0.0, 0.0, 0.6)),
+                    );
+
+                    let new_win = WindowDesc::new(container)
                         .show_titlebar(false)
                         .transparent(true)
                         .window_size((width, height))

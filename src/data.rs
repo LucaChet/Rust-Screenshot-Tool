@@ -1,13 +1,16 @@
 use druid::{
-    widget::{Button, FillStrat, Flex, Image, Painter, SizedBox, Controller, Container},
-    WidgetPod, Color, CursorDesc, Data, EventCtx, ImageBuf, Lens, PaintCtx, Point, Rect, RenderContext,
-    TimerToken, Widget, WidgetExt, WindowDesc, WindowState, Env, Event, LifeCycle, LifeCycleCtx, UpdateCtx, Size,
-    LayoutCtx, BoxConstraints
+    widget::{Button, Container, Controller, FillStrat, Flex, Image, Painter, SizedBox},
+    BoxConstraints, Color, CursorDesc, Data, Env, Event, EventCtx, ImageBuf, LayoutCtx, Lens,
+    LifeCycle, LifeCycleCtx, PaintCtx, Point, Rect, RenderContext, Size, TimerToken, UpdateCtx,
+    Widget, WidgetExt, WidgetPod, WindowDesc, WindowState,
 };
 // use druid_shell::{TimerToken};
 
 use crate::controller::*;
-use image::*;
+use arboard::Clipboard;
+use arboard::ImageData;
+use std::borrow::Cow;
+use image::{*, codecs::png::PngDecoder};
 use raster::{transform, Color as rasterColor, Image as rasterImage};
 use screenshots::Screen;
 use serde::{Deserialize, Serialize};
@@ -182,7 +185,7 @@ pub fn show_screen(
             (data.area.start.x * data.area.scale) + data.area.width,
             (data.area.start.y * data.area.scale) + data.area.heigth,
         )));
-    } 
+    }
     // else if data.flag_resize {
     //     // let displays = screenshots::DisplayInfo::all().expect("error");
     //     // let scale = displays[0].scale_factor as f64;
@@ -200,7 +203,6 @@ pub fn show_screen(
     //     col.add_child(draw_rect_resize());
     // }
 
-    
     let mut row = Flex::row();
     let mut row2 = Flex::row();
 
@@ -213,9 +215,9 @@ pub fn show_screen(
             // ctx.window().clone().close();
 
             let displays = screenshots::DisplayInfo::all().expect("error");
-        let scale = displays[0].scale_factor as f64;
-        let width = displays[0].width as f64 * scale;
-        let height = displays[0].height as f64 * scale;
+            let scale = displays[0].scale_factor as f64;
+            let width = displays[0].width as f64 * scale;
+            let height = displays[0].height as f64 * scale;
             let new_win = WindowDesc::new(draw_rect_resize(ctx, image.clone(), &mut data.clone()))
                 .title("Image Crop")
                 .window_size((width, height))
@@ -225,6 +227,27 @@ pub fn show_screen(
             ctx.new_window(new_win);
         });
 
+    let copy_button =
+        Button::new("copy to clipboard").on_click(move |ctx: &mut EventCtx, data: &mut Screenshot, _env| {
+            let mut clip = Clipboard::new().unwrap();
+            let formatted: ImageData = ImageData { width: data.img.width(), height: data.img.height(), bytes: Cow::from(data.img.raw_pixels()) };
+            clip.set_image(formatted).unwrap();
+            println!("Saved check your clipboard");
+            let imm = clip.get_image().unwrap();
+            let displays = screenshots::DisplayInfo::all().expect("error");
+            let scale = displays[0].scale_factor as f64;
+            let width = displays[0].width as f64 * scale;
+            let height = displays[0].height as f64 * scale;
+            let new_win = WindowDesc::new(draw_rect_resize(ctx, ImageBuf::from_raw(imm.bytes, druid::piet::ImageFormat::RgbaPremul, data.img.width(), data.img.height()), &mut data.clone()))
+                .title("Image Crop")
+                .window_size((width, height))
+                .set_position((0.0, 0.0))
+                .show_titlebar(true);
+
+            ctx.new_window(new_win);
+        });
+
+    row.add_child(copy_button);
     row.add_child(resize_button);
     col.add_child(row);
 
@@ -234,7 +257,7 @@ pub fn show_screen(
     // if data.flag_resize{
     //     col.add_child(rect);
     // }
-    
+
     col
 }
 
@@ -280,10 +303,14 @@ pub fn draw_rect() -> impl Widget<Screenshot> {
 // }
 
 // Funzione per la finestra di ritaglio
-fn draw_rect_resize(ctx: &mut EventCtx, image: ImageBuf, data: &mut Screenshot) -> impl Widget<Screenshot> {
+fn draw_rect_resize(
+    ctx: &mut EventCtx,
+    image: ImageBuf,
+    data: &mut Screenshot,
+) -> impl Widget<Screenshot> {
     // Crea una widget tree con l'immagine e il rettangolo ridimensionabile
     let mut flex = Flex::row();
-    
+
     // Crea l'immagine di sfondo
     let mut img = Image::new(image.clone()).fill_mode(FillStrat::ScaleDown);
     // Imposta il clip area per il rettangolo di ritaglio
@@ -317,13 +344,7 @@ impl ResizableRect {
 }
 
 impl Widget<Screenshot> for ResizableRect {
-    fn event(
-        &mut self,
-        ctx: &mut EventCtx,
-        event: &Event,
-        _data: &mut Screenshot,
-        _env: &Env,
-    ) {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut Screenshot, _env: &Env) {
         match event {
             Event::MouseDown(mouse_event) if self.rect.contains(mouse_event.pos) => {
                 self.resizing = true;
@@ -346,9 +367,23 @@ impl Widget<Screenshot> for ResizableRect {
         ctx.stroke(self.rect, &Color::rgb(0.0, 0.0, 0.0), 2.0);
     }
 
-    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _ev: &LifeCycle, _data: &Screenshot, _env: &Env) {}
+    fn lifecycle(
+        &mut self,
+        _ctx: &mut LifeCycleCtx,
+        _ev: &LifeCycle,
+        _data: &Screenshot,
+        _env: &Env,
+    ) {
+    }
 
-    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &Screenshot, _data: &Screenshot, _env: &Env) {}
+    fn update(
+        &mut self,
+        _ctx: &mut UpdateCtx,
+        _old_data: &Screenshot,
+        _data: &Screenshot,
+        _env: &Env,
+    ) {
+    }
 
     fn layout(
         &mut self,
@@ -359,10 +394,4 @@ impl Widget<Screenshot> for ResizableRect {
     ) -> Size {
         Size::new(self.rect.width(), self.rect.height())
     }
-
 }
-
-
-
-
-

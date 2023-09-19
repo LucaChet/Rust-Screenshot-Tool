@@ -278,6 +278,7 @@ impl AppDelegate<Screenshot> for Delegate {
             //     println!("Error writing file: {e}");
             // }
             // Specifica il formato dell'immagine (in questo caso PNG)
+            // if let Some(path) = file_info.pa
             let color_type = ColorType::Rgba8;
             let file = std::fs::File::create(file_info.path()).unwrap();
             let encoder = image::codecs::png::PngEncoder::new(file);

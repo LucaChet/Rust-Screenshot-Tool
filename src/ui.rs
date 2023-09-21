@@ -1,14 +1,18 @@
+use std::fs::File;
+
 use druid::widget::{
-    Container, Button, CrossAxisAlignment, Either, Flex, FlexParams, Label, Padding, Painter, Stepper,
-    TextBox, ZStack,
+    Button, Container, CrossAxisAlignment, Either, Flex, FlexParams, Image, Label, Padding,
+    Painter, Stepper, TextBox, ZStack,
 };
 
 use druid::{
-    Point, Color, Data, Env, EventCtx, FileDialogOptions, FileSpec, RenderContext, UnitPoint, Widget,
-    WidgetExt, WindowDesc, WindowState,
+    commands, AppDelegate, Color, Command, Data, Env, EventCtx, FileDialogOptions, FileSpec,
+    ImageBuf, LocalizedString, Menu, MenuItem, Point, RenderContext, UnitPoint, Widget, WidgetExt,
+    WindowDesc, WindowState,
 };
 
 use druid_widget_nursery::DropdownSelect;
+use image::ImageBuffer;
 
 use crate::controller::*;
 use crate::data::*;
@@ -82,8 +86,9 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
         .with_step(1.0)
         .lens(Screenshot::time_interval);
 
-        
-    let label_timer = Label::new(|data: &Screenshot, _: &Env| format!("⌛Delay timer: {} secondi", data.time_interval));
+    let label_timer = Label::new(|data: &Screenshot, _: &Env| {
+        format!("⌛Delay timer: {} secondi", data.time_interval)
+    });
 
     let row_timer = Flex::row()
         .with_child(label_timer)
@@ -91,6 +96,7 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
         .with_child(timer_box);
 
     let mut row = Flex::row();
+    let mut save_row = Flex::row();
 
     let button_modifica = Either::new(
         |data: &Screenshot, _: &Env| data.screen_fatto,
@@ -121,12 +127,15 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
             .lens(Screenshot::new_name)
             .controller(Enter {}),
         Label::new(|data: &Screenshot, _: &Env| {
-            format!("{}{}", data.name, data.format.to_string())
+            if data.name == "" {
+                format!("{}", data.name)
+            } else {
+                format!("{}{}", data.name, data.format.to_string())
+            }
         }),
     );
 
     let dropdown = DropdownSelect::new(vec![
-        ("MainFormat", Format::MainFormat),
         ("Png", Format::Png),
         ("Jpg", Format::Jpg),
         ("Gif", Format::Gif),
@@ -135,7 +144,7 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
     .disabled_if(|data: &Screenshot, _: &Env| data.name == "")
     .align_right();
 
-    let button_save = Button::new("SAVE")
+    let button_save_as = Button::new("SAVE AS")
         .disabled_if(|data: &Screenshot, _: &Env| data.name == "")
         .on_click(move |ctx: &mut EventCtx, data: &mut Screenshot, _env| {
             let formats = vec![
@@ -163,13 +172,47 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
         })
         .align_right();
 
+    let button_path = Button::new("Choose Default Path").on_click(
+        move |ctx: &mut EventCtx, _data: &mut Screenshot, _env| {
+            let open_dialog_options = FileDialogOptions::new()
+                .select_directories()
+                .button_text("Open");
+
+            ctx.submit_command(druid::commands::SHOW_OPEN_PANEL.with(open_dialog_options.clone()))
+        },
+    );
+
+    let button_save =
+        Button::new("Save").on_click(move |_ctx: &mut EventCtx, data: &mut Screenshot, _env| {
+            let image: ImageBuffer<image::Rgba<u8>, Vec<u8>> = ImageBuffer::from_vec(
+                data.img.width() as u32,
+                data.img.height() as u32,
+                data.img.raw_pixels().to_vec(),
+            )
+            .unwrap();
+
+            image
+                .save_with_format(
+                    format!(
+                        "{}/{}{}",
+                        data.default_save_path.clone(),
+                        data.name,
+                        data.format.to_string()
+                    ),
+                    image::ImageFormat::Png,
+                )
+                .expect("Errore nel salvataggio automatico!");
+        });
+
     row.add_child(screen_name);
     row.add_child(button_modifica);
     row.add_child(gestisci_screen);
 
     let mut row2 = Flex::row();
     row2.add_child(dropdown);
-    row2.add_child(button_save);
+    save_row.add_child(button_path);
+    save_row.add_child(button_save);
+    save_row.add_child(button_save_as);
 
     col.add_default_spacer();
 
@@ -180,6 +223,6 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
 
     ZStack::new(col.with_flex_child(row, FlexParams::new(1.0, CrossAxisAlignment::Start)))
         .with_aligned_child(Padding::new(5., row_timer), UnitPoint::TOP_LEFT)
-        .with_aligned_child(Padding::new(5., row2), UnitPoint::BOTTOM_RIGHT)
+        .with_aligned_child(Padding::new(5., save_row), UnitPoint::BOTTOM_RIGHT)
+        .with_aligned_child(Padding::new(5., row2), UnitPoint::BOTTOM_LEFT)
 }
-

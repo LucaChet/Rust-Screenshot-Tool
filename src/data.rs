@@ -1,5 +1,7 @@
 use druid::{
-    widget::{Button, Container, Controller, FillStrat, Flex, Image, Painter, SizedBox, ZStack},
+    widget::{
+        Button, Container, Controller, Either, FillStrat, Flex, Image, Painter, SizedBox, ZStack,
+    },
     BoxConstraints, Color, CursorDesc, Data, Env, Event, EventCtx, ImageBuf, LayoutCtx, Lens,
     LifeCycle, LifeCycleCtx, PaintCtx, Point, Rect, RenderContext, Size, TimerToken, UpdateCtx,
     Widget, WidgetExt, WidgetPod, WindowDesc, WindowState,
@@ -15,9 +17,10 @@ use screenshots::Screen;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 
+use self::selected_area_derived_lenses::heigth;
+
 #[derive(Clone, Data, PartialEq, Debug, Serialize, Deserialize)]
 pub enum Format {
-    MainFormat,
     Png,
     Jpg,
     Gif,
@@ -26,7 +29,6 @@ pub enum Format {
 impl Format {
     pub fn to_string(&self) -> String {
         match self {
-            Format::MainFormat => "".to_string(),
             Format::Jpg => ".jpg".to_string(),
             Format::Png => ".png".to_string(),
             Format::Gif => ".gif".to_string(),
@@ -80,6 +82,19 @@ impl SelectedArea {
 }
 
 #[derive(Clone, Data, Lens)]
+pub struct ResizedArea{
+    pub x: f64,
+    pub y: f64,
+    pub width: f64,
+    pub height: f64,
+}
+impl ResizedArea{
+    pub fn new()->Self{
+        Self { x: 0.0, y: 0.0, width: 0.0, height: 0.0 }
+    }
+}
+
+#[derive(Clone, Data, Lens)]
 pub struct Screenshot {
     pub name: String,
     pub format: Format,
@@ -92,6 +107,9 @@ pub struct Screenshot {
     pub flag_selection: bool, //serve per fare far partire il controller solo dopo aver acquisito l'area
     pub full_screen: bool,
     pub time_interval: f64,
+    pub default_save_path: String,
+    pub flag_resize: bool,
+    pub resized_area: ResizedArea,
 }
 
 impl Screenshot {
@@ -108,6 +126,9 @@ impl Screenshot {
             flag_selection: false,
             full_screen: false,
             time_interval: 0.0,
+            default_save_path: "C:/Users/Utente/Pictures".to_string(),
+            flag_resize: false,
+            resized_area: ResizedArea::new(),
         }
     }
 
@@ -124,14 +145,13 @@ impl Screenshot {
         let image: ImageBuffer<Rgba<u8>, Vec<u8>> = screens[0].capture().unwrap();
         let time: String = chrono::offset::Utc::now().to_string();
 
-        self.format = Format::MainFormat; //default
         self.name = time;
         self.name = self
             .name
             .replace(".", "-")
             .replace(":", "-")
             .replace(" ", "_");
-        self.name += &self.format.to_string();
+        // self.name += &self.format.to_string();
 
         self.img = ImageBuf::from_raw(
             image.clone().into_raw(),
@@ -155,14 +175,13 @@ impl Screenshot {
             )
             .unwrap();
 
-        self.format = Format::MainFormat; //default
         self.name = chrono::offset::Utc::now().to_string();
         self.name = self
             .name
             .replace(".", "-")
             .replace(":", "-")
             .replace(" ", "_");
-        self.name += &self.format.to_string();
+        // self.name += &self.format.to_string();
 
         self.img = ImageBuf::from_raw(
             image.clone().into_raw(),
@@ -202,16 +221,20 @@ pub fn show_screen(
     //     )));
     // }
 
-    // let mut row = Flex::row();
+    let mut col = Flex::column();
+    let mut row = Flex::row();
     // let mut row2 = Flex::row();
 
-    let sizedbox = SizedBox::new(img).width(1200.).height(700.);
+    let sizedbox = SizedBox::new(img).width(800.).height(500.);
 
     let resize_button =
         Button::new("resize").on_click(move |ctx: &mut EventCtx, data: &mut Screenshot, _env| {
-            // data.flag_resize = true;
-            // data.screen_window(ctx);
-            // ctx.window().clone().close();
+            data.flag_resize = true;
+        });
+
+    let annulla_button =
+        Button::new("cancel").on_click(move |ctx: &mut EventCtx, data: &mut Screenshot, _env| {
+            data.flag_resize = false;
         });
 
     let copy_button = Button::new("copy to clipboard").on_click(
@@ -227,29 +250,60 @@ pub fn show_screen(
         },
     );
 
-    // row.add_child(copy_button);
-    // row.add_child(resize_button);
-    // col.add_child(row);
+    let button1 = Either::new(
+        |data: &Screenshot, _: &Env| data.flag_resize,
+        annulla_button,
+        copy_button,
+    );
+
+    let button2 = Either::new(
+        |data: &Screenshot, _: &Env| data.flag_resize,
+        Button::new("update"),
+        resize_button,
+    );
+
+    row.add_child(button1);
+    row.add_child(button2);
+    col.add_child(row);
 
     // row2.add_child(sizedbox);
-    // col.add_child(row2);
+    col.add_default_spacer();
+    col.add_default_spacer();
 
+    col.add_child(
+        ZStack::new(sizedbox).with_centered_child(Either::new(
+            |data: &Screenshot, _: &Env| data.flag_resize,
+            Painter::new(|ctx, data: &Screenshot, _env| {
+                let rect = druid::Rect::from_points(
+                    (data.resized_area.x, data.resized_area.y),
+                    (data.resized_area.x + data.resized_area.width, data.resized_area.y + data.resized_area.height),
+                );
+                ctx.fill(rect, &Color::rgba(0.0, 0.0, 0.0, 0.5));
+                ctx.stroke(rect, &druid::Color::RED, 2.0);
+                
+            })
+            .center()
+            .controller(ResizeController {}),
+            druid::widget::Label::new(""),
+        )),
+    );
 
+    // ZStack::new(sizedbox.center()).with_centered_child(
+    //     Painter::new(|ctx: &mut PaintCtx<'_, '_, '_>, data: &Screenshot, _env| {
+    //         let displays = screenshots::DisplayInfo::all().expect("error");
+    //         let scale = displays[0].scale_factor as f64;
+    //         let width = displays[0].width as f64 * scale;
+    //         let height = displays[0].height as f64 * scale;
+    //         // let (start, end) = (data.area.start, data.area.end);
+    //         let rect = Rect::from_center_size(((width/2.) , (height/2.)), (data.area.width, data.area.heigth));
 
-    ZStack::new(sizedbox.center()).with_centered_child(
-        Painter::new(|ctx: &mut PaintCtx<'_, '_, '_>, data: &Screenshot, _env| {
-            let displays = screenshots::DisplayInfo::all().expect("error");
-            let scale = displays[0].scale_factor as f64;
-            let width = displays[0].width as f64 * scale;
-            let height = displays[0].height as f64 * scale;
-            // let (start, end) = (data.area.start, data.area.end);
-            let rect = Rect::from_center_size(((width/2.) , (height/2.)), (data.area.width, data.area.heigth));
+    //         ctx.fill(rect, &Color::rgba(0.0, 0.0, 0.0, 0.4));
+    //         ctx.stroke(rect, &druid::Color::RED, 1.0);
+    //     })
+    //     .center(),
+    // )
 
-            ctx.fill(rect, &Color::rgba(0.0, 0.0, 0.0, 0.4));
-            ctx.stroke(rect, &druid::Color::RED, 1.0);
-        })
-        .center(),
-    )
+    col
 }
 
 pub fn draw_rect() -> impl Widget<Screenshot> {

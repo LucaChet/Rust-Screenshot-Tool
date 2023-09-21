@@ -1,6 +1,7 @@
 use druid::{
-    commands, AppDelegate, Code, Command, Cursor, DelegateCtx, Env, Event, EventCtx, Handled,
-    MouseButton, Point, Target, Widget, WindowState,
+    commands, AppDelegate, Code, Command, Cursor, DelegateCtx, Env, Event, EventCtx,
+    FileDialogOptions, FileSpec, Handled, LocalizedString, MouseButton, Point, Target, Widget,
+    WindowState,
 };
 use std::time::Duration;
 
@@ -111,12 +112,12 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
     ) {
         if data.full_screen == false {
             let mut current = ctx.window().clone();
-            
-            if data.time_interval > 0.0 && self.flag{
+
+            if data.time_interval > 0.0 && self.flag {
                 self.t1 = ctx.request_timer(Duration::from_secs(data.time_interval as u64));
                 self.flag = false;
                 current.set_window_state(WindowState::Minimized);
-            }else if self.flag {
+            } else if self.flag {
                 self.flag = false;
                 ctx.set_cursor(&Cursor::Crosshair);
             }
@@ -128,7 +129,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
                         // Inizia a tenere traccia del punto in cui è iniziato il trascinamento.
 
                         // ctx.set_cursor(&Cursor::Crosshair);
-                        
+
                         let start_point = mouse_event.pos;
 
                         ctx.set_active(true);
@@ -192,14 +193,14 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
                 Event::Timer(id) => {
                     if self.t1 == *id && data.flag_selection {
                         if data.area.width != 0.0 && data.area.heigth != 0.0 {
-                            data.do_screen_area();  //dovrebbe essere do_screen_area -> cambio per prova
+                            data.do_screen_area(); //dovrebbe essere do_screen_area -> cambio per prova
                             self.flag = true;
                         }
                         data.flag_selection = false;
                         data.screen_window(ctx);
                         ctx.window().close();
-                    }
-                    else if self.t1 == *id{  //posso selezionare dopo tot secondi
+                    } else if self.t1 == *id {
+                        //posso selezionare dopo tot secondi
                         data.time_interval = 0.0;
                         current.set_always_on_top(true);
                         current.set_window_state(WindowState::Restored);
@@ -212,20 +213,19 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
         } else if data.full_screen {
             let mut current = ctx.window().clone();
             current.set_window_state(WindowState::Minimized);
-            
-            if data.time_interval < 0.5 && self.flag{
+
+            if data.time_interval < 0.5 && self.flag {
                 self.t1 = ctx.request_timer(Duration::from_millis(500));
                 self.flag = false;
-                
-            } else if self.flag{
+            } else if self.flag {
                 self.t1 = ctx.request_timer(Duration::from_secs(data.time_interval as u64));
-                self.flag = false;                
+                self.flag = false;
             }
             match event {
                 Event::Timer(id) => {
                     if self.t1 == *id {
                         data.do_screen();
-                        self.flag=true;
+                        self.flag = true;
                         data.screen_window(ctx);
                         ctx.window().close();
                     }
@@ -238,6 +238,123 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
         child.event(ctx, event, data, env);
     }
 
+    fn lifecycle(
+        &mut self,
+        child: &mut W,
+        ctx: &mut druid::LifeCycleCtx,
+        event: &druid::LifeCycle,
+        data: &Screenshot,
+        env: &Env,
+    ) {
+        child.lifecycle(ctx, event, data, env)
+    }
+
+    fn update(
+        &mut self,
+        child: &mut W,
+        ctx: &mut druid::UpdateCtx,
+        old_data: &Screenshot,
+        data: &Screenshot,
+        env: &Env,
+    ) {
+        child.update(ctx, old_data, data, env)
+    }
+}
+
+pub struct ResizeController;
+
+impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ResizeController {
+    fn event(
+        &mut self,
+        child: &mut W,
+        ctx: &mut EventCtx,
+        event: &druid::Event,
+        data: &mut Screenshot,
+        env: &Env,
+    ) {
+        let area_width = 800.;
+        let area_height = 500.;
+        let original_width = data.img.width() as f64;
+        let original_height = data.img.height() as f64;
+
+        // Calcola le dimensioni ridimensionate dell'immagine mantenendo i rapporti tra larghezza e altezza.
+        let mut new_width = original_width;
+        let mut new_height = original_height;
+
+        if original_width > area_width {
+            new_width = area_width;
+            new_height = (area_width * original_height) / original_width;
+        }
+
+        if new_height > area_height {
+            new_height = area_height;
+            new_width = (area_height * original_width) / original_height;
+        }
+
+        let center_x = area_width / 2.;
+        let center_y = area_height / 2.;
+
+        let top_left_x = center_x - (new_width / 2.);
+        let top_left_y = center_y - (new_height / 2.);
+
+        data.resized_area.x = top_left_x;
+        data.resized_area.y = top_left_y;
+        data.resized_area.width = new_width;
+        data.resized_area.height = new_height;
+
+        let delta = 1.0;
+
+        match event {
+            Event::MouseDown(mouse_event) => {}
+            Event::MouseUp(mouse_event) => {}
+            Event::MouseMove(mouse_event) => {
+
+                // Controlla il bordo superiore.
+                if mouse_event.pos.x >= data.resized_area.x
+                    && mouse_event.pos.x <= data.resized_area.x + data.resized_area.width
+                    && mouse_event.pos.y >= data.resized_area.y
+                    && mouse_event.pos.y < data.resized_area.y + 3.0
+                {
+                    ctx.set_cursor(&Cursor::ResizeUpDown);
+                }
+                // Controlla il bordo inferiore.
+                else if mouse_event.pos.x >= data.resized_area.x
+                    && mouse_event.pos.x <= data.resized_area.x + data.resized_area.width
+                    && mouse_event.pos.y >= data.resized_area.y + data.resized_area.height - 3.0
+                    && mouse_event.pos.y <= data.resized_area.y + data.resized_area.height
+                {
+                    ctx.set_cursor(&Cursor::ResizeUpDown);
+                }
+                // Controlla il bordo destro.
+                else if mouse_event.pos.x >= data.resized_area.x + data.resized_area.width - 3.0
+                    && mouse_event.pos.x <= data.resized_area.x + data.resized_area.width
+                    && mouse_event.pos.y >= data.resized_area.y
+                    && mouse_event.pos.y <= data.resized_area.y + data.resized_area.height
+                {
+                    ctx.set_cursor(&Cursor::ResizeLeftRight);
+                }
+                // Controlla il bordo sinistro.
+                else if mouse_event.pos.x >= data.resized_area.x
+                    && mouse_event.pos.x < data.resized_area.x + 3.0
+                    && mouse_event.pos.y >= data.resized_area.y
+                    && mouse_event.pos.y <= data.resized_area.y + data.resized_area.height
+                {
+                    ctx.set_cursor(&Cursor::ResizeLeftRight);
+                }
+                // Controlla l'interno dell'area.
+                else if mouse_event.pos.x > data.resized_area.x
+                    && mouse_event.pos.x < data.resized_area.x + data.resized_area.width
+                    && mouse_event.pos.y > data.resized_area.y
+                    && mouse_event.pos.y < data.resized_area.y + data.resized_area.height
+                {
+                    ctx.set_cursor(&Cursor::Pointer);
+                }else{
+                    ctx.set_cursor(&Cursor::Arrow);
+                }
+            }
+            _ => {}
+        }
+    }
     fn lifecycle(
         &mut self,
         child: &mut W,
@@ -290,6 +407,18 @@ impl AppDelegate<Screenshot> for Delegate {
                 color_type,
             ) {
                 println!("Error writing file: {}", e);
+            }
+            return Handled::Yes;
+        }
+        if let Some(file_info) = cmd.get(commands::OPEN_FILE) {
+            match std::fs::read_dir(file_info.path()) {
+                Ok(_) => {
+                    data.default_save_path = String::from(file_info.path().to_str().unwrap());
+                    println!("{}", String::from(file_info.path().to_str().unwrap()));
+                }
+                Err(e) => {
+                    println!("Error opening path: {e}");
+                }
             }
             return Handled::Yes;
         }

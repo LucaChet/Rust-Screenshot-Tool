@@ -340,6 +340,7 @@ pub fn show_screen(
             .center()
             .controller(ResizeController {
                 selected_part: ResizeInteraction::NoInteraction,
+                flag_init: true
             }),
             druid::widget::Label::new(""),
         )),

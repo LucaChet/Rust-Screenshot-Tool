@@ -87,10 +87,11 @@ pub struct ResizedArea{
     pub y: f64,
     pub width: f64,
     pub height: f64,
+    pub flag_init: bool,
 }
 impl ResizedArea{
     pub fn new()->Self{
-        Self { x: 0.0, y: 0.0, width: 0.0, height: 0.0 }
+        Self { x: 0.0, y: 0.0, width: 0.0, height: 0.0, flag_init: true }
     }
 }
 
@@ -230,11 +231,13 @@ pub fn show_screen(
     let resize_button =
         Button::new("resize").on_click(move |ctx: &mut EventCtx, data: &mut Screenshot, _env| {
             data.flag_resize = true;
+            data.resized_area.flag_init = true;
         });
 
     let annulla_button =
         Button::new("cancel").on_click(move |ctx: &mut EventCtx, data: &mut Screenshot, _env| {
             data.flag_resize = false;
+            data.resized_area.flag_init = true;
         });
 
     let copy_button = Button::new("copy to clipboard").on_click(

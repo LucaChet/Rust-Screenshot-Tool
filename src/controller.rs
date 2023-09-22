@@ -299,11 +299,13 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ResizeController {
         let top_left_x = center_x - (new_width / 2.);
         let top_left_y = center_y - (new_height / 2.);
 
-        data.resized_area.x = top_left_x;
-        data.resized_area.y = top_left_y;
-        data.resized_area.width = new_width;
-        data.resized_area.height = new_height;
-
+        if data.resized_area.flag_init {
+            data.resized_area.x = top_left_x;
+            data.resized_area.y = top_left_y;
+            data.resized_area.width = new_width;
+            data.resized_area.height = new_height;
+            data.resized_area.flag_init = false;
+        }
         let delta = 3.0;
 
         match event {

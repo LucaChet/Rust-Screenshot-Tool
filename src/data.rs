@@ -87,7 +87,6 @@ pub struct ResizedArea {
     pub y: f64,
     pub width: f64,
     pub height: f64,
-    pub flag_init: bool,
 }
 impl ResizedArea {
     pub fn new() -> Self {
@@ -96,7 +95,6 @@ impl ResizedArea {
             y: 0.0,
             width: 0.0,
             height: 0.0,
-            flag_init: true,
         }
     }
     pub fn new_parameter(x: f64, y: f64, width: f64, height: f64) -> Self {
@@ -105,7 +103,6 @@ impl ResizedArea {
             y,
             width,
             height,
-            flag_init: true,
         }
     }
 }
@@ -248,7 +245,6 @@ impl Screenshot {
         self.resized_area.y = top_left_y;
         self.resized_area.width = new_width;
         self.resized_area.height = new_height;
-        self.resized_area.flag_init = false;
     }
 }
 
@@ -281,13 +277,11 @@ pub fn show_screen(
     let resize_button =
         Button::new("resize").on_click(move |ctx: &mut EventCtx, data: &mut Screenshot, _env| {
             data.flag_resize = true;
-            data.resized_area.flag_init = true;
         });
 
     let annulla_button =
         Button::new("cancel").on_click(move |ctx: &mut EventCtx, data: &mut Screenshot, _env| {
             data.flag_resize = false;
-            data.resized_area.flag_init = true;
             data.reset_resize_rect();
         });
 
@@ -340,7 +334,7 @@ pub fn show_screen(
             .center()
             .controller(ResizeController {
                 selected_part: ResizeInteraction::NoInteraction,
-                flag_init: true
+                original_area: ResizedArea::new_parameter(data.resized_area.x, data.resized_area.y, data.resized_area.width, data.resized_area.height)
             }),
             druid::widget::Label::new(""),
         )),

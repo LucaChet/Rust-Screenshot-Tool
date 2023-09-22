@@ -262,7 +262,7 @@ pub enum ResizeInteraction {
 }
 pub struct ResizeController {
     pub selected_part: ResizeInteraction,
-    pub flag_init: bool,
+    pub original_area: ResizedArea,
 }
 
 impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ResizeController {
@@ -277,8 +277,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ResizeController {
         let delta = 3.0;
         match event {
             Event::MouseDown(mouse_event) => {
-                ctx.set_active(true);
-
+               
                 // Controlla il bordo superiore.
                 if mouse_event.pos.x >= data.resized_area.x
                     && mouse_event.pos.x <= data.resized_area.x + data.resized_area.width
@@ -317,19 +316,13 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ResizeController {
                     && mouse_event.pos.y > data.resized_area.y
                     && mouse_event.pos.y < data.resized_area.y + data.resized_area.height
                 {
-                    
                     self.selected_part = ResizeInteraction::Area(mouse_event.pos.x, mouse_event.pos.y);
-                    self.flag_init = false;
-                   
-                    
                 } else {
                     ctx.set_cursor(&Cursor::Arrow);
                 }
             }
             Event::MouseUp(mouse_event) => {
                 ctx.request_paint();
-                ctx.set_active(false);
-                self.flag_init = true;
                 self.selected_part = ResizeInteraction::NoInteraction;
             }
             Event::MouseMove(mouse_event) => {
@@ -377,38 +370,36 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ResizeController {
                 }
 
                 //update coordinates of the red rect
-                if ctx.is_active() {
-                    let deltax = mouse_event.pos.x - data.resized_area.x;
-                    let deltay = mouse_event.pos.y - data.resized_area.y;
+                let deltax = mouse_event.pos.x - data.resized_area.x;
+                let deltay = mouse_event.pos.y - data.resized_area.y;
 
-                    match self.selected_part {
-                        ResizeInteraction::Area(start_x, start_y) => {
-                            let deltax = mouse_event.pos.x - start_x;
-                            let deltay = mouse_event.pos.y - start_y;
-                            println!("ECCO! {}, : , {}", start_x, start_y);
-                            data.resized_area.x += deltax;
-                            data.resized_area.y += deltay;
-                            self.selected_part = ResizeInteraction::Area(mouse_event.pos.x, mouse_event.pos.y);
-                        }
-                        ResizeInteraction::Bottom => {
-                            let deltay = mouse_event.pos.y - (data.resized_area.y + data.resized_area.height);
-                            data.resized_area.height += deltay;
-                        }
-                        ResizeInteraction::Upper => {
-                            data.resized_area.y += deltay;
-                            data.resized_area.height -= deltay
-                        }
-                        ResizeInteraction::Left => {
-                            data.resized_area.x += deltax;
-                            data.resized_area.width -= deltax;
-                        }
-                        ResizeInteraction::Right => {
-                            let deltax = mouse_event.pos.x - (data.resized_area.x + data.resized_area.width);
-                            data.resized_area.width += deltax;
-                        }
-                        _ => (),
+                match self.selected_part {
+                    ResizeInteraction::Area(start_x, start_y) => {
+                        let deltax = mouse_event.pos.x - start_x;
+                        let deltay = mouse_event.pos.y - start_y;
+                        data.resized_area.x += deltax;
+                        data.resized_area.y += deltay;
+                        self.selected_part = ResizeInteraction::Area(mouse_event.pos.x, mouse_event.pos.y);
                     }
+                    ResizeInteraction::Bottom => {
+                        let deltay = mouse_event.pos.y - (data.resized_area.y + data.resized_area.height);
+                        data.resized_area.height += deltay;
+                    }
+                    ResizeInteraction::Upper => {
+                        data.resized_area.y += deltay;
+                        data.resized_area.height -= deltay
+                    }
+                    ResizeInteraction::Left => {
+                        data.resized_area.x += deltax;
+                        data.resized_area.width -= deltax;
+                    }
+                    ResizeInteraction::Right => {
+                        let deltax = mouse_event.pos.x - (data.resized_area.x + data.resized_area.width);
+                        data.resized_area.width += deltax;
+                    }
+                    _ => (),
                 }
+                
             }
             _ => {}
         }

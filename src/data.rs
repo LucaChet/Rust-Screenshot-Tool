@@ -215,32 +215,32 @@ impl Screenshot {
         ctx.new_window(window);
     }
 
-    pub fn reset_resize_rect(&mut self){
+    pub fn reset_resize_rect(&mut self) {
         let area_width = 800.;
         let area_height = 500.;
         let original_width = self.img.width() as f64;
         let original_height = self.img.height() as f64;
-    
+
         // Calcola le dimensioni ridimensionate dell'immagine mantenendo i rapporti tra larghezza e altezza.
         let mut new_width = original_width;
         let mut new_height = original_height;
-    
+
         if original_width > area_width {
             new_width = area_width;
             new_height = (area_width * original_height) / original_width;
         }
-    
+
         if new_height > area_height {
             new_height = area_height;
             new_width = (area_height * original_width) / original_height;
         }
-    
+
         let center_x = area_width / 2.;
         let center_y = area_height / 2.;
-    
+
         let top_left_x = center_x - (new_width / 2.);
         let top_left_y = center_y - (new_height / 2.);
-    
+
         self.resized_area.x = top_left_x;
         self.resized_area.y = top_left_y;
         self.resized_area.width = new_width;
@@ -298,6 +298,26 @@ pub fn show_screen(
         },
     );
 
+    // let update_button =
+    //     Button::new("update").on_click(|ctx: &mut EventCtx, data: &mut Screenshot, _env| {
+    //         let image: ImageBuffer<image::Rgba<u8>, Vec<u8>> = ImageBuffer::from_vec(
+    //             data.img.width() as u32,
+    //             data.img.height() as u32,
+    //             data.img.raw_pixels().to_vec(),
+    //         )
+    //         .unwrap();
+
+            
+
+    //         image(Some(Rect::new(
+    //                     data.resized_area.x,
+    //                     data.resized_area.y,
+    //                     data.resized_area.x + data.resized_area.width,
+    //                     data.resized_area.y + data.resized_area.height,
+    //                 )));
+
+    //     });
+
     let button1 = Either::new(
         |data: &Screenshot, _: &Env| data.flag_resize,
         annulla_button,
@@ -334,7 +354,12 @@ pub fn show_screen(
             .center()
             .controller(ResizeController {
                 selected_part: ResizeInteraction::NoInteraction,
-                original_area: ResizedArea::new_parameter(data.resized_area.x, data.resized_area.y, data.resized_area.width, data.resized_area.height)
+                original_area: ResizedArea::new_parameter(
+                    data.resized_area.x,
+                    data.resized_area.y,
+                    data.resized_area.width,
+                    data.resized_area.height,
+                ),
             }),
             druid::widget::Label::new(""),
         )),

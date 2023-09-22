@@ -256,12 +256,13 @@ pub enum ResizeInteraction {
     NoInteraction,
     Area(f64, f64),
     Upper,
-    Bottom(f64),
+    Bottom,
     Left,
-    Right(f64),
+    Right,
 }
 pub struct ResizeController {
     pub selected_part: ResizeInteraction,
+    pub flag_init: bool,
 }
 
 impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ResizeController {
@@ -277,6 +278,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ResizeController {
         match event {
             Event::MouseDown(mouse_event) => {
                 ctx.set_active(true);
+
                 // Controlla il bordo superiore.
                 if mouse_event.pos.x >= data.resized_area.x
                     && mouse_event.pos.x <= data.resized_area.x + data.resized_area.width
@@ -291,7 +293,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ResizeController {
                     && mouse_event.pos.y >= data.resized_area.y + data.resized_area.height - delta
                     && mouse_event.pos.y <= data.resized_area.y + data.resized_area.height
                 {
-                    self.selected_part = ResizeInteraction::Bottom(mouse_event.pos.y);
+                    self.selected_part = ResizeInteraction::Bottom;
                 }
                 // Controlla il bordo destro.
                 else if mouse_event.pos.x >= data.resized_area.x + data.resized_area.width - delta
@@ -299,7 +301,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ResizeController {
                     && mouse_event.pos.y >= data.resized_area.y
                     && mouse_event.pos.y <= data.resized_area.y + data.resized_area.height
                 {
-                    self.selected_part = ResizeInteraction::Right(mouse_event.pos.x);
+                    self.selected_part = ResizeInteraction::Right;
                 }
                 // Controlla il bordo sinistro.
                 else if mouse_event.pos.x >= data.resized_area.x
@@ -315,8 +317,11 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ResizeController {
                     && mouse_event.pos.y > data.resized_area.y
                     && mouse_event.pos.y < data.resized_area.y + data.resized_area.height
                 {
-                    self.selected_part =
-                        ResizeInteraction::Area(mouse_event.pos.x, mouse_event.pos.y);
+                    
+                    self.selected_part = ResizeInteraction::Area(mouse_event.pos.x, mouse_event.pos.y);
+                    self.flag_init = false;
+                   
+                    
                 } else {
                     ctx.set_cursor(&Cursor::Arrow);
                 }
@@ -324,34 +329,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ResizeController {
             Event::MouseUp(mouse_event) => {
                 ctx.request_paint();
                 ctx.set_active(false);
-                let deltax = (mouse_event.pos.x - data.resized_area.x);
-                let deltay = (mouse_event.pos.y - data.resized_area.y);
-
-                match self.selected_part {
-                    ResizeInteraction::Area(start_x, start_y) => {
-                        let deltax = mouse_event.pos.x - start_x;
-                        let deltay = mouse_event.pos.y - start_y;
-                        data.resized_area.x += deltax;
-                        data.resized_area.y += deltay;
-                    }
-                    ResizeInteraction::Bottom(start_y) => {
-                        let deltay = mouse_event.pos.y - start_y;
-                        data.resized_area.height += deltay;
-                    }
-                    ResizeInteraction::Upper => {
-                        data.resized_area.y += deltay;
-                        data.resized_area.height -= deltay
-                    }
-                    ResizeInteraction::Left => {
-                        data.resized_area.x += deltax;
-                        data.resized_area.width -= deltax;
-                    }
-                    ResizeInteraction::Right(start_x) => {
-                        let deltax = mouse_event.pos.x - start_x;
-                        data.resized_area.width += deltax;
-                    }
-                    _ => (),
-                }
+                self.flag_init = true;
                 self.selected_part = ResizeInteraction::NoInteraction;
             }
             Event::MouseMove(mouse_event) => {
@@ -407,11 +385,13 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ResizeController {
                         ResizeInteraction::Area(start_x, start_y) => {
                             let deltax = mouse_event.pos.x - start_x;
                             let deltay = mouse_event.pos.y - start_y;
+                            println!("ECCO! {}, : , {}", start_x, start_y);
                             data.resized_area.x += deltax;
                             data.resized_area.y += deltay;
+                            self.selected_part = ResizeInteraction::Area(mouse_event.pos.x, mouse_event.pos.y);
                         }
-                        ResizeInteraction::Bottom(start_y) => {
-                            let deltay = mouse_event.pos.y - start_y;
+                        ResizeInteraction::Bottom => {
+                            let deltay = mouse_event.pos.y - (data.resized_area.y + data.resized_area.height);
                             data.resized_area.height += deltay;
                         }
                         ResizeInteraction::Upper => {
@@ -422,8 +402,8 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ResizeController {
                             data.resized_area.x += deltax;
                             data.resized_area.width -= deltax;
                         }
-                        ResizeInteraction::Right(start_x) => {
-                            let deltax = mouse_event.pos.x - start_x;
+                        ResizeInteraction::Right => {
+                            let deltax = mouse_event.pos.x - (data.resized_area.x + data.resized_area.width);
                             data.resized_area.width += deltax;
                         }
                         _ => (),

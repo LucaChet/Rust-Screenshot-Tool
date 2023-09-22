@@ -387,19 +387,27 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ResizeController {
                     }
                     ResizeInteraction::Bottom => {
                         let deltay = mouse_event.pos.y - (data.resized_area.y + data.resized_area.height);
-                        data.resized_area.height += deltay;
+                        if data.resized_area.y + deltay >= self.original_area.y + self.original_area.height{
+                            data.resized_area.height += deltay;
+                        }
                     }
                     ResizeInteraction::Upper => {
                         data.resized_area.y += deltay;
-                        data.resized_area.height -= deltay
+                        if data.resized_area.y + deltay >= self.original_area.y{
+                            data.resized_area.height -= deltay
+                        }
                     }
                     ResizeInteraction::Left => {
                         data.resized_area.x += deltax;
-                        data.resized_area.width -= deltax;
+                        if data.resized_area.x + deltax >= self.original_area.x{
+                            data.resized_area.width -= deltax;
+                        }
                     }
                     ResizeInteraction::Right => {
                         let deltax = mouse_event.pos.x - (data.resized_area.x + data.resized_area.width);
-                        data.resized_area.width += deltax;
+                        if  data.resized_area.x + deltax <= self.original_area.x + self.original_area.width {
+                            data.resized_area.width += deltax;
+                        } 
                     }
                     _ => (),
                 }

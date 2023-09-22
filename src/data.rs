@@ -283,7 +283,7 @@ pub fn show_screen(
                 
             })
             .center()
-            .controller(ResizeController {}),
+            .controller(ResizeController { selected_part: ResizeInteraction::NoInteraction }),
             druid::widget::Label::new(""),
         )),
     );

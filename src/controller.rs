@@ -124,18 +124,13 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
             match event {
                 Event::MouseDown(mouse_event) => {
                     if mouse_event.button == MouseButton::Left {
-                        // Esegui qualcosa quando viene premuto il pulsante sinistro del mouse.
-                        // Ad esempio, puoi iniziare a trascinare un elemento.
-                        // Inizia a tenere traccia del punto in cui è iniziato il trascinamento.
-
-                        // ctx.set_cursor(&Cursor::Crosshair);
 
                         let start_point = mouse_event.pos;
 
                         ctx.set_active(true);
                         // ctx.set_handled();
 
-                        // Memorizza il punto iniziale nel data del widget o in un altro stato.
+                        // Memorizza il punto iniziale
                         data.area.start = start_point;
                         data.area.end = start_point;
                     }
@@ -157,7 +152,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
                         ctx.set_active(false);
                         // ctx.set_handled();
 
-                        // Calcola il punto finale del trascinamento e fai qualcosa con esso.
+                        // Calcola il punto finale del trascinamento
                         let end_point = mouse_event.pos;
                         data.area.end = end_point;
 
@@ -173,12 +168,9 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
                 }
                 Event::MouseMove(mouse_event) => {
                     if ctx.is_active() {
-                        // Esegui qualcosa quando il mouse viene spostato durante il trascinamento.
-                        // Ad esempio, aggiorna la posizione dell'elemento trascinato.
                         let end_point = mouse_event.pos;
                         data.area.end = end_point;
-                        // Calcola la differenza tra la posizione attuale e quella iniziale.
-
+                        
                         let deltax =
                             (mouse_event.pos.x - data.area.start.x).abs() * data.area.scale;
                         let deltay =
@@ -261,7 +253,17 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
     }
 }
 
-pub struct ResizeController;
+pub enum ResizeInteraction{
+    NoInteraction,
+    Area(f64, f64),
+    Upper,
+    Bottom(f64),
+    Left,
+    Right(f64),
+}
+pub struct ResizeController{
+    pub selected_part: ResizeInteraction,
+}
 
 impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ResizeController {
     fn event(
@@ -302,31 +304,107 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ResizeController {
         data.resized_area.width = new_width;
         data.resized_area.height = new_height;
 
-        let delta = 1.0;
+        let delta = 3.0;
 
         match event {
-            Event::MouseDown(mouse_event) => {}
-            Event::MouseUp(mouse_event) => {}
+            Event::MouseDown(mouse_event) => {
+                ctx.set_active(true);
+                // Controlla il bordo superiore.
+                if mouse_event.pos.x >= data.resized_area.x
+                    && mouse_event.pos.x <= data.resized_area.x + data.resized_area.width
+                    && mouse_event.pos.y >= data.resized_area.y
+                    && mouse_event.pos.y < data.resized_area.y + delta
+                {
+                    self.selected_part = ResizeInteraction::Upper;
+                }
+                // Controlla il bordo inferiore.
+                else if mouse_event.pos.x >= data.resized_area.x
+                    && mouse_event.pos.x <= data.resized_area.x + data.resized_area.width
+                    && mouse_event.pos.y >= data.resized_area.y + data.resized_area.height - delta
+                    && mouse_event.pos.y <= data.resized_area.y + data.resized_area.height
+                {
+                    self.selected_part = ResizeInteraction::Bottom(mouse_event.pos.y);
+                }
+                // Controlla il bordo destro.
+                else if mouse_event.pos.x >= data.resized_area.x + data.resized_area.width - delta
+                    && mouse_event.pos.x <= data.resized_area.x + data.resized_area.width
+                    && mouse_event.pos.y >= data.resized_area.y
+                    && mouse_event.pos.y <= data.resized_area.y + data.resized_area.height
+                {
+                    self.selected_part = ResizeInteraction::Right(mouse_event.pos.x);
+                }
+                // Controlla il bordo sinistro.
+                else if mouse_event.pos.x >= data.resized_area.x
+                    && mouse_event.pos.x < data.resized_area.x + delta
+                    && mouse_event.pos.y >= data.resized_area.y
+                    && mouse_event.pos.y <= data.resized_area.y + data.resized_area.height
+                {
+                    self.selected_part = ResizeInteraction::Left;
+                }
+                // Controlla l'interno dell'area.
+                else if mouse_event.pos.x > data.resized_area.x
+                    && mouse_event.pos.x < data.resized_area.x + data.resized_area.width
+                    && mouse_event.pos.y > data.resized_area.y
+                    && mouse_event.pos.y < data.resized_area.y + data.resized_area.height
+                {
+                    self.selected_part = ResizeInteraction::Area(mouse_event.pos.x, mouse_event.pos.y);
+                }else{
+                    ctx.set_cursor(&Cursor::Arrow);
+                }
+            }
+            Event::MouseUp(mouse_event) => {
+                ctx.request_paint();
+                ctx.set_active(false);
+                let deltax = (mouse_event.pos.x - data.resized_area.x);
+                let deltay = (mouse_event.pos.y - data.resized_area.y);
+
+                match self.selected_part {
+                    ResizeInteraction::Area(start_x, start_y) => {
+                        let deltax = mouse_event.pos.x - start_x;
+                        let deltay = mouse_event.pos.y - start_y;
+                        data.resized_area.x += deltax;
+                        data.resized_area.y += deltay;
+                    },
+                    ResizeInteraction::Bottom(start_y) => {
+                        let deltay = mouse_event.pos.y - start_y;
+                        data.resized_area.height += deltay;
+                    },
+                    ResizeInteraction::Upper => {
+                        data.resized_area.y += deltay; 
+                        data.resized_area.height -= deltay
+                    },
+                    ResizeInteraction::Left => {
+                        data.resized_area.x += deltax;
+                        data.resized_area.width -= deltax;
+                    },
+                    ResizeInteraction::Right(start_x) => {
+                        let deltax = mouse_event.pos.x - start_x;
+                        data.resized_area.width += deltax;
+                    },
+                    _ => ()
+                }
+                self.selected_part = ResizeInteraction::NoInteraction;
+            }
             Event::MouseMove(mouse_event) => {
 
                 // Controlla il bordo superiore.
                 if mouse_event.pos.x >= data.resized_area.x
                     && mouse_event.pos.x <= data.resized_area.x + data.resized_area.width
                     && mouse_event.pos.y >= data.resized_area.y
-                    && mouse_event.pos.y < data.resized_area.y + 3.0
+                    && mouse_event.pos.y < data.resized_area.y + delta
                 {
                     ctx.set_cursor(&Cursor::ResizeUpDown);
                 }
                 // Controlla il bordo inferiore.
                 else if mouse_event.pos.x >= data.resized_area.x
                     && mouse_event.pos.x <= data.resized_area.x + data.resized_area.width
-                    && mouse_event.pos.y >= data.resized_area.y + data.resized_area.height - 3.0
+                    && mouse_event.pos.y >= data.resized_area.y + data.resized_area.height - delta
                     && mouse_event.pos.y <= data.resized_area.y + data.resized_area.height
                 {
                     ctx.set_cursor(&Cursor::ResizeUpDown);
                 }
                 // Controlla il bordo destro.
-                else if mouse_event.pos.x >= data.resized_area.x + data.resized_area.width - 3.0
+                else if mouse_event.pos.x >= data.resized_area.x + data.resized_area.width - delta
                     && mouse_event.pos.x <= data.resized_area.x + data.resized_area.width
                     && mouse_event.pos.y >= data.resized_area.y
                     && mouse_event.pos.y <= data.resized_area.y + data.resized_area.height
@@ -335,7 +413,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ResizeController {
                 }
                 // Controlla il bordo sinistro.
                 else if mouse_event.pos.x >= data.resized_area.x
-                    && mouse_event.pos.x < data.resized_area.x + 3.0
+                    && mouse_event.pos.x < data.resized_area.x + delta
                     && mouse_event.pos.y >= data.resized_area.y
                     && mouse_event.pos.y <= data.resized_area.y + data.resized_area.height
                 {
@@ -350,6 +428,39 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ResizeController {
                     ctx.set_cursor(&Cursor::Pointer);
                 }else{
                     ctx.set_cursor(&Cursor::Arrow);
+                }
+                
+                //update coordinates of the red rect 
+                if ctx.is_active(){
+                    let deltax = mouse_event.pos.x - data.resized_area.x;
+                    let deltay = mouse_event.pos.y - data.resized_area.y;
+                    
+                    match self.selected_part {
+                        ResizeInteraction::Area(start_x, start_y) => {
+                            let deltax = mouse_event.pos.x - start_x;
+                            let deltay = mouse_event.pos.y - start_y;
+                            data.resized_area.x += deltax;
+                            data.resized_area.y += deltay;
+                        },
+                        ResizeInteraction::Bottom(start_y) => {
+                            let deltay = mouse_event.pos.y - start_y;
+                            data.resized_area.height += deltay;
+                        },
+                        ResizeInteraction::Upper => {
+                            data.resized_area.y += deltay; 
+                            data.resized_area.height -= deltay
+                        },
+                        ResizeInteraction::Left => {
+                            data.resized_area.x += deltax;
+                            data.resized_area.width -= deltax;
+                        },
+                        ResizeInteraction::Right(start_x) => {
+                            let deltax = mouse_event.pos.x - start_x;
+                            data.resized_area.width += deltax;
+                        },
+                        _ => ()
+                    }
+                    
                 }
             }
             _ => {}

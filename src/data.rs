@@ -82,16 +82,31 @@ impl SelectedArea {
 }
 
 #[derive(Clone, Data, Lens)]
-pub struct ResizedArea{
+pub struct ResizedArea {
     pub x: f64,
     pub y: f64,
     pub width: f64,
     pub height: f64,
     pub flag_init: bool,
 }
-impl ResizedArea{
-    pub fn new()->Self{
-        Self { x: 0.0, y: 0.0, width: 0.0, height: 0.0, flag_init: true }
+impl ResizedArea {
+    pub fn new() -> Self {
+        Self {
+            x: 0.0,
+            y: 0.0,
+            width: 0.0,
+            height: 0.0,
+            flag_init: true,
+        }
+    }
+    pub fn new_parameter(x: f64, y: f64, width: f64, height: f64) -> Self {
+        Self {
+            x,
+            y,
+            width,
+            height,
+            flag_init: true,
+        }
     }
 }
 
@@ -202,6 +217,39 @@ impl Screenshot {
             .set_always_on_top(true);
         ctx.new_window(window);
     }
+
+    pub fn reset_resize_rect(&mut self){
+        let area_width = 800.;
+        let area_height = 500.;
+        let original_width = self.img.width() as f64;
+        let original_height = self.img.height() as f64;
+    
+        // Calcola le dimensioni ridimensionate dell'immagine mantenendo i rapporti tra larghezza e altezza.
+        let mut new_width = original_width;
+        let mut new_height = original_height;
+    
+        if original_width > area_width {
+            new_width = area_width;
+            new_height = (area_width * original_height) / original_width;
+        }
+    
+        if new_height > area_height {
+            new_height = area_height;
+            new_width = (area_height * original_width) / original_height;
+        }
+    
+        let center_x = area_width / 2.;
+        let center_y = area_height / 2.;
+    
+        let top_left_x = center_x - (new_width / 2.);
+        let top_left_y = center_y - (new_height / 2.);
+    
+        self.resized_area.x = top_left_x;
+        self.resized_area.y = top_left_y;
+        self.resized_area.width = new_width;
+        self.resized_area.height = new_height;
+        self.resized_area.flag_init = false;
+    }
 }
 
 pub fn show_screen(
@@ -211,6 +259,8 @@ pub fn show_screen(
 ) -> impl Widget<Screenshot> {
     // println!("x:{},  y:{}", data.area.start.x, data.area.start.y);
 
+    data.flag_resize = false;
+    data.reset_resize_rect();
     let img = Image::new(image.clone()).fill_mode(FillStrat::ScaleDown);
 
     // if data.area.width != 0.0 && data.area.heigth != 0.0 && data.flag_resize == false {
@@ -238,6 +288,7 @@ pub fn show_screen(
         Button::new("cancel").on_click(move |ctx: &mut EventCtx, data: &mut Screenshot, _env| {
             data.flag_resize = false;
             data.resized_area.flag_init = true;
+            data.reset_resize_rect();
         });
 
     let copy_button = Button::new("copy to clipboard").on_click(
@@ -272,21 +323,24 @@ pub fn show_screen(
     // row2.add_child(sizedbox);
     col.add_default_spacer();
     col.add_default_spacer();
-
     col.add_child(
         ZStack::new(sizedbox).with_centered_child(Either::new(
             |data: &Screenshot, _: &Env| data.flag_resize,
             Painter::new(|ctx, data: &Screenshot, _env| {
                 let rect = druid::Rect::from_points(
                     (data.resized_area.x, data.resized_area.y),
-                    (data.resized_area.x + data.resized_area.width, data.resized_area.y + data.resized_area.height),
+                    (
+                        data.resized_area.x + data.resized_area.width,
+                        data.resized_area.y + data.resized_area.height,
+                    ),
                 );
                 ctx.fill(rect, &Color::rgba(0.0, 0.0, 0.0, 0.5));
                 ctx.stroke(rect, &druid::Color::RED, 2.0);
-                
             })
             .center()
-            .controller(ResizeController { selected_part: ResizeInteraction::NoInteraction }),
+            .controller(ResizeController {
+                selected_part: ResizeInteraction::NoInteraction,
+            }),
             druid::widget::Label::new(""),
         )),
     );

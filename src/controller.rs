@@ -124,7 +124,6 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
             match event {
                 Event::MouseDown(mouse_event) => {
                     if mouse_event.button == MouseButton::Left {
-
                         let start_point = mouse_event.pos;
 
                         ctx.set_active(true);
@@ -170,7 +169,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
                     if ctx.is_active() {
                         let end_point = mouse_event.pos;
                         data.area.end = end_point;
-                        
+
                         let deltax =
                             (mouse_event.pos.x - data.area.start.x).abs() * data.area.scale;
                         let deltay =
@@ -253,7 +252,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
     }
 }
 
-pub enum ResizeInteraction{
+pub enum ResizeInteraction {
     NoInteraction,
     Area(f64, f64),
     Upper,
@@ -261,7 +260,7 @@ pub enum ResizeInteraction{
     Left,
     Right(f64),
 }
-pub struct ResizeController{
+pub struct ResizeController {
     pub selected_part: ResizeInteraction,
 }
 
@@ -274,47 +273,14 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ResizeController {
         data: &mut Screenshot,
         env: &Env,
     ) {
-        let area_width = 800.;
-        let area_height = 500.;
-        let original_width = data.img.width() as f64;
-        let original_height = data.img.height() as f64;
-
-        // Calcola le dimensioni ridimensionate dell'immagine mantenendo i rapporti tra larghezza e altezza.
-        let mut new_width = original_width;
-        let mut new_height = original_height;
-
-        if original_width > area_width {
-            new_width = area_width;
-            new_height = (area_width * original_height) / original_width;
-        }
-
-        if new_height > area_height {
-            new_height = area_height;
-            new_width = (area_height * original_width) / original_height;
-        }
-
-        let center_x = area_width / 2.;
-        let center_y = area_height / 2.;
-
-        let top_left_x = center_x - (new_width / 2.);
-        let top_left_y = center_y - (new_height / 2.);
-
-        if data.resized_area.flag_init {
-            data.resized_area.x = top_left_x;
-            data.resized_area.y = top_left_y;
-            data.resized_area.width = new_width;
-            data.resized_area.height = new_height;
-            data.resized_area.flag_init = false;
-        }
         let delta = 3.0;
-
         match event {
             Event::MouseDown(mouse_event) => {
                 ctx.set_active(true);
                 // Controlla il bordo superiore.
                 if mouse_event.pos.x >= data.resized_area.x
                     && mouse_event.pos.x <= data.resized_area.x + data.resized_area.width
-                    && mouse_event.pos.y >= data.resized_area.y
+                    && mouse_event.pos.y >= data.resized_area.y - delta
                     && mouse_event.pos.y < data.resized_area.y + delta
                 {
                     self.selected_part = ResizeInteraction::Upper;
@@ -349,8 +315,9 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ResizeController {
                     && mouse_event.pos.y > data.resized_area.y
                     && mouse_event.pos.y < data.resized_area.y + data.resized_area.height
                 {
-                    self.selected_part = ResizeInteraction::Area(mouse_event.pos.x, mouse_event.pos.y);
-                }else{
+                    self.selected_part =
+                        ResizeInteraction::Area(mouse_event.pos.x, mouse_event.pos.y);
+                } else {
                     ctx.set_cursor(&Cursor::Arrow);
                 }
             }
@@ -366,29 +333,28 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ResizeController {
                         let deltay = mouse_event.pos.y - start_y;
                         data.resized_area.x += deltax;
                         data.resized_area.y += deltay;
-                    },
+                    }
                     ResizeInteraction::Bottom(start_y) => {
                         let deltay = mouse_event.pos.y - start_y;
                         data.resized_area.height += deltay;
-                    },
+                    }
                     ResizeInteraction::Upper => {
-                        data.resized_area.y += deltay; 
+                        data.resized_area.y += deltay;
                         data.resized_area.height -= deltay
-                    },
+                    }
                     ResizeInteraction::Left => {
                         data.resized_area.x += deltax;
                         data.resized_area.width -= deltax;
-                    },
+                    }
                     ResizeInteraction::Right(start_x) => {
                         let deltax = mouse_event.pos.x - start_x;
                         data.resized_area.width += deltax;
-                    },
-                    _ => ()
+                    }
+                    _ => (),
                 }
                 self.selected_part = ResizeInteraction::NoInteraction;
             }
             Event::MouseMove(mouse_event) => {
-
                 // Controlla il bordo superiore.
                 if mouse_event.pos.x >= data.resized_area.x
                     && mouse_event.pos.x <= data.resized_area.x + data.resized_area.width
@@ -428,41 +394,40 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ResizeController {
                     && mouse_event.pos.y < data.resized_area.y + data.resized_area.height
                 {
                     ctx.set_cursor(&Cursor::Pointer);
-                }else{
+                } else {
                     ctx.set_cursor(&Cursor::Arrow);
                 }
-                
-                //update coordinates of the red rect 
-                if ctx.is_active(){
+
+                //update coordinates of the red rect
+                if ctx.is_active() {
                     let deltax = mouse_event.pos.x - data.resized_area.x;
                     let deltay = mouse_event.pos.y - data.resized_area.y;
-                    
+
                     match self.selected_part {
                         ResizeInteraction::Area(start_x, start_y) => {
                             let deltax = mouse_event.pos.x - start_x;
                             let deltay = mouse_event.pos.y - start_y;
                             data.resized_area.x += deltax;
                             data.resized_area.y += deltay;
-                        },
+                        }
                         ResizeInteraction::Bottom(start_y) => {
                             let deltay = mouse_event.pos.y - start_y;
                             data.resized_area.height += deltay;
-                        },
+                        }
                         ResizeInteraction::Upper => {
-                            data.resized_area.y += deltay; 
+                            data.resized_area.y += deltay;
                             data.resized_area.height -= deltay
-                        },
+                        }
                         ResizeInteraction::Left => {
                             data.resized_area.x += deltax;
                             data.resized_area.width -= deltax;
-                        },
+                        }
                         ResizeInteraction::Right(start_x) => {
                             let deltax = mouse_event.pos.x - start_x;
                             data.resized_area.width += deltax;
-                        },
-                        _ => ()
+                        }
+                        _ => (),
                     }
-                    
                 }
             }
             _ => {}

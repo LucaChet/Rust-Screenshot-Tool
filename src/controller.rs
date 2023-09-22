@@ -375,10 +375,14 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ResizeController {
 
                 match self.selected_part {
                     ResizeInteraction::Area(start_x, start_y) => {
+                        
                         let deltax = mouse_event.pos.x - start_x;
                         let deltay = mouse_event.pos.y - start_y;
-                        data.resized_area.x += deltax;
-                        data.resized_area.y += deltay;
+                        if data.resized_area.x + deltax >= self.original_area.x && data.resized_area.x + data.resized_area.width + deltax <= self.original_area.x + self.original_area.width
+                          && data.resized_area.y + deltay >= self.original_area.y && data.resized_area.y + data.resized_area.height + deltay <= self.original_area.y + self.original_area.height {
+                            data.resized_area.x += deltax;
+                            data.resized_area.y += deltay;
+                        }
                         self.selected_part = ResizeInteraction::Area(mouse_event.pos.x, mouse_event.pos.y);
                     }
                     ResizeInteraction::Bottom => {

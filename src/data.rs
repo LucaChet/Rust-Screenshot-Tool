@@ -253,10 +253,11 @@ pub fn show_screen(
     image: ImageBuf,
     data: &mut Screenshot,
 ) -> impl Widget<Screenshot> {
-    // println!("x:{},  y:{}", data.area.start.x, data.area.start.y);
-
+    
     data.flag_resize = false;
     data.reset_resize_rect();
+    // println!("{}", data.resized_area.y);
+
     let img = Image::new(image.clone()).fill_mode(FillStrat::ScaleDown);
 
     // if data.area.width != 0.0 && data.area.heigth != 0.0 && data.flag_resize == false {
@@ -298,25 +299,83 @@ pub fn show_screen(
         },
     );
 
-    // let update_button =
-    //     Button::new("update").on_click(|ctx: &mut EventCtx, data: &mut Screenshot, _env| {
-    //         let image: ImageBuffer<image::Rgba<u8>, Vec<u8>> = ImageBuffer::from_vec(
-    //             data.img.width() as u32,
-    //             data.img.height() as u32,
-    //             data.img.raw_pixels().to_vec(),
-    //         )
-    //         .unwrap();
+    let update_button =
+        Button::new("update").on_click(|ctx: &mut EventCtx, data: &mut Screenshot, _env| {
+
+            //METODO SCREEN
+            let screen = Screen::from_point(0, 0).unwrap();
+
+            let image = screen
+                .capture_area(
+                    ((data.resized_area.x) * data.area.scale) as i32,
+                    ((data.resized_area.y) * data.area.scale) as i32,
+                    ((data.resized_area.width) * data.area.scale) as u32,
+                    ((data.resized_area.height) * data.area.scale) as u32,
+                )
+                .unwrap();
+
+            data.img = ImageBuf::from_raw(
+                image.clone().into_raw(),
+                druid::piet::ImageFormat::RgbaPremul,
+                image.clone().width() as usize,
+                image.clone().height() as usize,
+            );
+
+            //METODO DYNAMIC IMAGE
+            // let image1: ImageBuffer<image::Rgba<u8>, Vec<u8>> = ImageBuffer::from_vec(
+            //     data.img.width() as u32,
+            //     data.img.height() as u32,
+            //     data.img.raw_pixels().to_vec(),
+            // )
+            // .unwrap();
+
+            // println!("after move ---> x: {}, y:{}",data.resized_area.x, data.resized_area.y);
+            // println!("after move ---> width: {}, heigth:{}",data.resized_area.width, data.resized_area.height);
+            
+            // println!("PRIMA -> w: {}, h: {}", image1.clone().width(), image1.clone().height());
+
+            // let dynamic_image = DynamicImage::ImageRgba8(image1);
+            // let new = dynamic_image.crop_imm(data.resized_area.x as u32, data.resized_area.y as u32, data.resized_area.width as u32, data.resized_area.height as u32);
+            // let image2 = new.to_rgba8();
+            // println!("DOPO -> w: {}, h: {}", image2.clone().width(), image2.clone().height());
+            // data.img = ImageBuf::from_raw(
+            //     image2.clone().into_raw(),
+            //     druid::piet::ImageFormat::RgbaPremul,
+            //     image2.clone().width() as usize,
+            //     image2.clone().height() as usize,
+            // );
+
 
             
+            //METODO PIXEL
+            // let mut cropped_img = ImageBuffer::new(data.resized_area.width as u32, data.resized_area.height as u32);
+            // let mut cropx = 0;
+            // let mut cropy = 0;
 
-    //         image(Some(Rect::new(
-    //                     data.resized_area.x,
-    //                     data.resized_area.y,
-    //                     data.resized_area.x + data.resized_area.width,
-    //                     data.resized_area.y + data.resized_area.height,
-    //                 )));
+            // // Copia i pixel dal rettangolo di ritaglio nell'immagine ritagliata
+            // for y in data.resized_area.y as u32..(data.resized_area.y+data.resized_area.height-1.) as u32{
+            //     for x in data.resized_area.x as u32..(data.resized_area.x+data.resized_area.width-1.) as u32 {
+            //         println!("pixel ---> x: {}, y:{} ---- riempi ---> cropx: {}, cropy:{}  ",x,y,cropx, cropy);
 
-    //     });
+            //         let source_pixel = image.get_pixel(x, y);
+            //         cropped_img.put_pixel(cropx, cropy, *source_pixel);
+            //         cropx += 1;
+            //     }
+            //     cropy += 1;
+            //     cropx = 0;
+            //     println!("AAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+            // }
+
+            // data.img = ImageBuf::from_raw(
+            //     cropped_img.clone().into_raw(),
+            //     druid::piet::ImageFormat::RgbaPremul,
+            //     cropped_img.clone().width() as usize,
+            //     cropped_img.clone().height() as usize,
+            // );
+
+            data.screen_window(ctx);
+            ctx.window().close();
+        });
 
     let button1 = Either::new(
         |data: &Screenshot, _: &Env| data.flag_resize,
@@ -326,7 +385,7 @@ pub fn show_screen(
 
     let button2 = Either::new(
         |data: &Screenshot, _: &Env| data.flag_resize,
-        Button::new("update"),
+        update_button,
         resize_button,
     );
 
@@ -364,22 +423,6 @@ pub fn show_screen(
             druid::widget::Label::new(""),
         )),
     );
-
-    // ZStack::new(sizedbox.center()).with_centered_child(
-    //     Painter::new(|ctx: &mut PaintCtx<'_, '_, '_>, data: &Screenshot, _env| {
-    //         let displays = screenshots::DisplayInfo::all().expect("error");
-    //         let scale = displays[0].scale_factor as f64;
-    //         let width = displays[0].width as f64 * scale;
-    //         let height = displays[0].height as f64 * scale;
-    //         // let (start, end) = (data.area.start, data.area.end);
-    //         let rect = Rect::from_center_size(((width/2.) , (height/2.)), (data.area.width, data.area.heigth));
-
-    //         ctx.fill(rect, &Color::rgba(0.0, 0.0, 0.0, 0.4));
-    //         ctx.stroke(rect, &druid::Color::RED, 1.0);
-    //     })
-    //     .center(),
-    // )
-
     col
 }
 

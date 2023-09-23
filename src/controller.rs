@@ -375,6 +375,8 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ResizeController {
                 let deltay = mouse_event.pos.y - data.resized_area.y;
 
                 if ctx.is_active(){
+                    // println!("x: {}, y:{}",data.resized_area.x, data.resized_area.y);
+
                 match self.selected_part {
                     ResizeInteraction::Area(start_x, start_y) => {
                         

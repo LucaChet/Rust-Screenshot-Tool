@@ -277,7 +277,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ResizeController {
         let delta = 3.0;
         match event {
             Event::MouseDown(mouse_event) => {
-               ctx.set_active(true);
+                ctx.set_active(true);
                 // Controlla il bordo superiore.
                 if mouse_event.pos.x >= data.resized_area.x
                     && mouse_event.pos.x <= data.resized_area.x + data.resized_area.width
@@ -316,7 +316,8 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ResizeController {
                     && mouse_event.pos.y > data.resized_area.y
                     && mouse_event.pos.y < data.resized_area.y + data.resized_area.height
                 {
-                    self.selected_part = ResizeInteraction::Area(mouse_event.pos.x, mouse_event.pos.y);
+                    self.selected_part =
+                        ResizeInteraction::Area(mouse_event.pos.x, mouse_event.pos.y);
                 } else {
                     ctx.set_cursor(&Cursor::Arrow);
                 }
@@ -374,49 +375,57 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ResizeController {
                 let deltax = mouse_event.pos.x - data.resized_area.x;
                 let deltay = mouse_event.pos.y - data.resized_area.y;
 
-                if ctx.is_active(){
-                    // println!("x: {}, y:{}",data.resized_area.x, data.resized_area.y);
-
-                match self.selected_part {
-                    ResizeInteraction::Area(start_x, start_y) => {
-                        
-                        let deltax = mouse_event.pos.x - start_x;
-                        let deltay = mouse_event.pos.y - start_y;
-                        if data.resized_area.x + deltax >= self.original_area.x && data.resized_area.x + data.resized_area.width + deltax <= self.original_area.x + self.original_area.width
-                          && data.resized_area.y + deltay >= self.original_area.y && data.resized_area.y + data.resized_area.height + deltay <= self.original_area.y + self.original_area.height {
-                            data.resized_area.x += deltax;
-                            data.resized_area.y += deltay;
+                if ctx.is_active() {
+                    match self.selected_part {
+                        ResizeInteraction::Area(start_x, start_y) => {
+                            let deltax = mouse_event.pos.x - start_x;
+                            let deltay = mouse_event.pos.y - start_y;
+                            if data.resized_area.x + deltax >= self.original_area.x
+                                && data.resized_area.x + data.resized_area.width + deltax
+                                    <= self.original_area.x + self.original_area.width
+                                && data.resized_area.y + deltay >= self.original_area.y
+                                && data.resized_area.y + data.resized_area.height + deltay
+                                    <= self.original_area.y + self.original_area.height
+                            {
+                                data.resized_area.x += deltax;
+                                data.resized_area.y += deltay;
+                            }
+                            self.selected_part =
+                                ResizeInteraction::Area(mouse_event.pos.x, mouse_event.pos.y);
                         }
-                        self.selected_part = ResizeInteraction::Area(mouse_event.pos.x, mouse_event.pos.y);
-                    }
-                    ResizeInteraction::Bottom => {
-                        let deltay = mouse_event.pos.y - (data.resized_area.y + data.resized_area.height);
-                        if data.resized_area.y + data.resized_area.height + deltay <= self.original_area.y + self.original_area.height{
-                            data.resized_area.height += deltay;
+                        ResizeInteraction::Bottom => {
+                            let deltay = mouse_event.pos.y - (data.resized_area.y + data.resized_area.height);
+                            if (data.resized_area.y + data.resized_area.height + deltay <= self.original_area.y + self.original_area.height)
+                                && (data.resized_area.y + data.resized_area.height + deltay >= data.resized_area.y + 10.)
+                            {
+                                data.resized_area.height += deltay;
+                            }
                         }
-                    }
-                    ResizeInteraction::Upper => {
-                        if data.resized_area.y + deltay >= self.original_area.y{
-                            data.resized_area.y += deltay;
-                            data.resized_area.height -= deltay
+                        ResizeInteraction::Upper => {
+                            if data.resized_area.y + deltay >= self.original_area.y && 
+                            data.resized_area.y + deltay <= data.resized_area.y + data.resized_area.height - 10.{
+                                data.resized_area.y += deltay;
+                                data.resized_area.height -= deltay
+                            }
                         }
-                    }
-                    ResizeInteraction::Left => {
-                        if data.resized_area.x + deltax >= self.original_area.x{
-                            data.resized_area.x += deltax;
-                            data.resized_area.width -= deltax;
+                        ResizeInteraction::Left => {
+                            if data.resized_area.x + deltax >= self.original_area.x && 
+                            data.resized_area.x + deltax <= data.resized_area.x + data.resized_area.width - 10.{
+                                data.resized_area.x += deltax;
+                                data.resized_area.width -= deltax;
+                            }
                         }
+                        ResizeInteraction::Right => {
+                            let deltax = mouse_event.pos.x - (data.resized_area.x + data.resized_area.width);
+                            if data.resized_area.x + data.resized_area.width + deltax <= self.original_area.x + self.original_area.width &&
+                            data.resized_area.x + data.resized_area.width + deltax >= data.resized_area.x + 10.
+                            {
+                                data.resized_area.width += deltax;
+                            }
+                        }
+                        _ => (),
                     }
-                    ResizeInteraction::Right => {
-                        let deltax = mouse_event.pos.x - (data.resized_area.x + data.resized_area.width);
-                        if  data.resized_area.x + data.resized_area.width + deltax <= self.original_area.x + self.original_area.width {
-                            data.resized_area.width += deltax;
-                        } 
-                    }
-                    _ => (),
                 }
-            }
-                
             }
             _ => {}
         }

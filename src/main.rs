@@ -3,7 +3,7 @@ use controller::*;
 
 use druid::{WindowDesc, AppLauncher, theme::{BUTTON_DARK, BUTTON_LIGHT, WINDOW_BACKGROUND_COLOR}, Color};
 // use saver::read_stored;
-use ui::ui_builder;
+use ui::{ui_builder, menu};
 
 mod ui;
 mod data;
@@ -17,8 +17,9 @@ mod controller;
 fn main() {
     //finestra principale che si apre quando lancio il programma
     let main_window = WindowDesc::new(ui_builder())
+        .menu(menu)
         .title("Screen Grabbing")
-        .window_size((700., 250.));
+        .window_size((900., 450.));
 
     
     let todo_state = Screenshot::new("".to_string(), Format::Png, "".to_string());

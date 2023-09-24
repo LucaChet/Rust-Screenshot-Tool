@@ -6,7 +6,7 @@ use druid::widget::{
 };
 
 use druid::{
-    commands, AppDelegate, Color, Command, Data, Env, EventCtx, FileDialogOptions, FileSpec,
+    WindowId, commands, AppDelegate, Color, Command, Data, Env, EventCtx, FileDialogOptions, FileSpec,
     ImageBuf, LocalizedString, Menu, MenuItem, Point, RenderContext, UnitPoint, Widget, WidgetExt,
     WindowDesc, WindowState,
 };
@@ -96,7 +96,6 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
         .with_child(timer_box);
 
     let mut row = Flex::row();
-    let mut save_row = Flex::row();
 
     let button_modifica = Either::new(
         |data: &Screenshot, _: &Env| data.screen_fatto,
@@ -135,94 +134,151 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
         }),
     );
 
-    let dropdown = DropdownSelect::new(vec![
-        ("Png", Format::Png),
-        ("Jpg", Format::Jpg),
-        ("Gif", Format::Gif),
-    ])
-    .lens(Screenshot::format)
-    .disabled_if(|data: &Screenshot, _: &Env| data.name == "")
-    .align_right();
-
-    let button_save_as = Button::new("SAVE AS")
-        .disabled_if(|data: &Screenshot, _: &Env| data.name == "")
-        .on_click(move |ctx: &mut EventCtx, data: &mut Screenshot, _env| {
-            let formats = vec![
-                FileSpec::new("jpg", &["jpg"]),
-                FileSpec::new("png", &["png"]),
-                FileSpec::new("gif", &["gif"]),
-                FileSpec::new("pnm", &["pnm"]),
-                FileSpec::new("tga", &["tga"]),
-                FileSpec::new("qoi", &["qoi"]),
-                FileSpec::new("tiff", &["tiff"]),
-                FileSpec::new("webp", &["webp"]),
-                FileSpec::new("bmp", &["bmp"]),
-            ];
-
-            let default_name = format!("{}{}", data.name, data.format.to_string());
-            let save_dialog_options = FileDialogOptions::new()
-                .allowed_types(formats)
-                .default_type(FileSpec::new("png", &["png"]))
-                // .title("Choose a target for this lovely file")
-                // .name_label("Target")
-                .default_name(default_name);
-            // .button_text("Export");
-
-            ctx.submit_command(druid::commands::SHOW_SAVE_PANEL.with(save_dialog_options.clone()))
-        })
-        .align_right();
-
-    let button_path = Button::new("Choose Default Path").on_click(
-        move |ctx: &mut EventCtx, _data: &mut Screenshot, _env| {
-            let open_dialog_options = FileDialogOptions::new()
-                .select_directories()
-                .button_text("Open");
-
-            ctx.submit_command(druid::commands::SHOW_OPEN_PANEL.with(open_dialog_options.clone()))
-        },
-    );
-
-    let button_save =
-        Button::new("Save").on_click(move |_ctx: &mut EventCtx, data: &mut Screenshot, _env| {
-            let image: ImageBuffer<image::Rgba<u8>, Vec<u8>> = ImageBuffer::from_vec(
-                data.img.width() as u32,
-                data.img.height() as u32,
-                data.img.raw_pixels().to_vec(),
-            )
-            .unwrap();
-
-            image
-                .save_with_format(
-                    format!(
-                        "{}/{}{}",
-                        data.default_save_path.clone(),
-                        data.name,
-                        data.format.to_string()
-                    ),
-                    image::ImageFormat::Png,
-                )
-                .expect("Errore nel salvataggio automatico!");
-        });
+    // let dropdown = DropdownSelect::new(vec![
+    //     ("Png", Format::Png),
+    //     ("Jpg", Format::Jpg),
+    //     ("Gif", Format::Gif),
+    // ])
+    // .lens(Screenshot::format)
+    // .disabled_if(|data: &Screenshot, _: &Env| data.name == "")
+    // .align_right();
 
     row.add_child(screen_name);
     row.add_child(button_modifica);
     row.add_child(gestisci_screen);
 
-    let mut row2 = Flex::row();
-    row2.add_child(dropdown);
-    save_row.add_child(button_path);
-    save_row.add_child(button_save);
-    save_row.add_child(button_save_as);
-
+    // let mut row2 = Flex::row();
+    // row2.add_child(dropdown);
     col.add_default_spacer();
 
-    // col.add_child(label_widget(row_timer, "Delay Timer"));
-    // col.add_child(row);
-    // col.add_child(row2);
-    // col
-
     ZStack::new(col.with_flex_child(row, FlexParams::new(1.0, CrossAxisAlignment::Start)))
-        .with_aligned_child(Padding::new(5., row_timer), UnitPoint::TOP_LEFT)
-        .with_aligned_child(Padding::new(5., save_row), UnitPoint::BOTTOM_RIGHT)
-        .with_aligned_child(Padding::new(5., row2), UnitPoint::BOTTOM_LEFT)
+        .with_aligned_child(Padding::new(5., row_timer), UnitPoint::BOTTOM_RIGHT)
+        // .with_aligned_child(Padding::new(5., row2), UnitPoint::BOTTOM_RIGHT)
+}
+
+#[allow(unused_assignments)]
+pub fn menu(_: Option<WindowId>, _state: &Screenshot, _: &Env) -> Menu<Screenshot>{
+    let menu = Menu::empty();
+
+    let mut file = Menu::new(LocalizedString::new("File"));
+    file = file
+    .entry(
+        MenuItem::new(LocalizedString::new("Choose default path..")).on_activate(
+            |ctx, _data: &mut Screenshot, _env|{
+                let open_dialog_options = FileDialogOptions::new()
+                .select_directories()
+                .button_text("Open");
+
+            ctx.submit_command(druid::commands::SHOW_OPEN_PANEL.with(open_dialog_options.clone()))
+            }
+        )
+    ).separator()
+    .entry(
+        MenuItem::new(LocalizedString::new("Save..")).on_activate(
+            |_ctx, data: &mut Screenshot, _env|{
+                let image: ImageBuffer<image::Rgba<u8>, Vec<u8>> = ImageBuffer::from_vec(
+                    data.img.width() as u32,
+                    data.img.height() as u32,
+                    data.img.raw_pixels().to_vec(),
+                )
+                .unwrap();
+    
+                image
+                    .save_with_format(
+                        format!(
+                            "{}/{}{}",
+                            data.default_save_path.clone(),
+                            data.name,
+                            data.format.to_string()
+                        ),
+                        image::ImageFormat::Png,
+                    )
+                    .expect("Errore nel salvataggio automatico!");
+            }
+        ).enabled_if(|data: &Screenshot, _: &Env| data.name != "")
+    )
+    .entry(
+        MenuItem::new(LocalizedString::new("Save as..")).on_activate(
+            |ctx, data: &mut Screenshot, _env|{
+                let formats = vec![
+                    FileSpec::new("jpg", &["jpg"]),
+                    FileSpec::new("png", &["png"]),
+                    FileSpec::new("gif", &["gif"]),
+                    FileSpec::new("pnm", &["pnm"]),
+                    FileSpec::new("tga", &["tga"]),
+                    FileSpec::new("qoi", &["qoi"]),
+                    FileSpec::new("tiff", &["tiff"]),
+                    FileSpec::new("webp", &["webp"]),
+                    FileSpec::new("bmp", &["bmp"]),
+                ];
+    
+                let default_name = format!("{}{}", data.name, data.format.to_string());
+                let save_dialog_options = FileDialogOptions::new()
+                    .allowed_types(formats)
+                    .default_type(FileSpec::new("png", &["png"]))
+                    .default_name(default_name);
+    
+                ctx.submit_command(druid::commands::SHOW_SAVE_PANEL.with(save_dialog_options.clone()))
+            }
+        ).enabled_if(|data: &Screenshot, _: &Env| data.name != "")
+    );
+
+    let mut format = Menu::new(LocalizedString::new("Format"));
+    format = format.entry(
+        MenuItem::new(LocalizedString::new("Png")).on_activate(
+            |_ctx, data: &mut Screenshot, _env|{
+                data.format = Format::Png;
+            }
+        )
+    ).entry(
+        MenuItem::new(LocalizedString::new("Jpg")).on_activate(
+            |_ctx, data: &mut Screenshot, _env|{
+                data.format = Format::Jpg;
+            }
+        )
+    ).entry(
+        MenuItem::new(LocalizedString::new("Gif")).on_activate(
+            |_ctx, data: &mut Screenshot, _env|{
+                data.format = Format::Gif;
+            }
+        )
+    ).entry(
+        MenuItem::new(LocalizedString::new("Pnm")).on_activate(
+            |_ctx, data: &mut Screenshot, _env|{
+                data.format = Format::Pnm;
+            }
+        )
+    ).entry(
+        MenuItem::new(LocalizedString::new("Tga")).on_activate(
+            |_ctx, data: &mut Screenshot, _env|{
+                data.format = Format::Tga;
+            }
+        )
+    ).entry(
+        MenuItem::new(LocalizedString::new("Qoi")).on_activate(
+            |_ctx, data: &mut Screenshot, _env|{
+                data.format = Format::Qoi;
+            }
+        )
+    ).entry(
+        MenuItem::new(LocalizedString::new("Tiff")).on_activate(
+            |_ctx, data: &mut Screenshot, _env|{
+                data.format = Format::Tiff;
+            }
+        )
+    ).entry(
+        MenuItem::new(LocalizedString::new("Webp")).on_activate(
+            |_ctx, data: &mut Screenshot, _env|{
+                data.format = Format::Webp;
+            }
+        )
+    ).entry(
+        MenuItem::new(LocalizedString::new("Bmp")).on_activate(
+            |_ctx, data: &mut Screenshot, _env|{
+                data.format = Format::Bmp;
+            }
+        )
+    );
+
+    menu.entry(file).entry(format)
 }

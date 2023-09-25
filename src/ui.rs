@@ -22,63 +22,16 @@ use crate::data::*;
 
 //albero
 pub fn ui_builder() -> impl Widget<Screenshot> {
-    let displays = screenshots::DisplayInfo::all().expect("error");
-    let scale = displays[0].scale_factor as f64;
-    let width = displays[0].width as f64 * scale;
-    let height = displays[0].height as f64 * scale;
-
     let mut col = Flex::column().with_child(
         Flex::row()
             .with_child(Button::new("SCREEN 📷").on_click(
                 |ctx, data: &mut Screenshot, _env| {
-                // let mut current = ctx.window().clone();
-                // current.set_window_state(WindowState::Minimized);
-                // data.full_screen = true;
-
-                // data.area.start = Point::new(0.0, 0.0);
-                // data.area.end = Point::new(0.0, 0.0);
-                // data.area.width = 0.0;
-                // data.area.heigth = 0.0;
-                // data.area.rgba.reset();
-
-                // let new_win = WindowDesc::new(draw_rect())
-                //     .show_titlebar(false)
-                //     .transparent(true)
-                //     .window_size((width, height))
-                //     .resizable(true)
-                //     .set_position((0.0, 0.0))
-                //     .set_always_on_top(true);
-
-                // ctx.new_window(new_win);
-                data.action_screen(ctx);
+                    data.action_screen(ctx);
                 },
             ))
             .with_child(Button::new("Capture Area 🖱️").on_click(
-                move |ctx: &mut EventCtx, data: &mut Screenshot, _env| {
-                    let mut current = ctx.window().clone();
-                    current.set_window_state(WindowState::Minimized);
-                    data.full_screen = false;
-
-                    data.area.start = Point::new(0.0, 0.0);
-                    data.area.end = Point::new(0.0, 0.0);
-                    data.area.width = 0.0;
-                    data.area.heigth = 0.0;
-                    data.area.rgba.reset();
-
-                    let container = Either::new(
-                        |data: &Screenshot, _: &Env| data.flag_transparency,
-                        Container::new(draw_rect()).background(Color::rgba(0.0, 0.0, 0.0, 0.0)),
-                        Container::new(draw_rect()).background(Color::rgba(0.0, 0.0, 0.0, 0.6)),
-                    );
-
-                    let new_win = WindowDesc::new(container)
-                        .show_titlebar(false)
-                        .transparent(true)
-                        .window_size((width, height))
-                        .resizable(false)
-                        .set_position((0.0, 0.0));
-
-                    ctx.new_window(new_win);
+                |ctx: &mut EventCtx, data: &mut Screenshot, _env| {
+                    data.action_capture(ctx);
                 },
             )),
     );
@@ -155,6 +108,7 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
 
     ZStack::new(col.with_flex_child(row, FlexParams::new(1.0, CrossAxisAlignment::Start)))
         .with_aligned_child(Padding::new(5., row_timer), UnitPoint::BOTTOM_RIGHT)
+        .controller(HotKeyController)
 }
 
 #[allow(unused_assignments)]
@@ -219,7 +173,7 @@ pub fn menu(_: Option<WindowId>, _state: &Screenshot, _: &Env) -> Menu<Screensho
                     .allowed_types(formats)
                     .default_type(FileSpec::new("png", &["png"]))
                     .default_name(default_name);
-    
+                
                 ctx.submit_command(druid::commands::SHOW_SAVE_PANEL.with(save_dialog_options.clone()))
             }
         ).enabled_if(|data: &Screenshot, _: &Env| data.name != "")
@@ -283,12 +237,12 @@ pub fn menu(_: Option<WindowId>, _state: &Screenshot, _: &Env) -> Menu<Screensho
         )
     );
 
-    // let mut action = Menu::new(LocalizedString::new("Action"));
-    // action = action.entry(MenuItem::new(LocalizedString::new("Screen")).on_activate(
-    //     | |{
+    let mut action = Menu::new(LocalizedString::new("Action"));
+    action = action.entry(MenuItem::new(LocalizedString::new("Screen")).on_activate(
+        |_ctx, data: &mut Screenshot, _env|{
 
-    //     }
-    // ));
+        }
+    ));
 
     menu.entry(file).entry(format)
 }

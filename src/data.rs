@@ -179,7 +179,7 @@ impl Screenshot {
         let scale = displays[0].scale_factor as f64;
         let width = displays[0].width as f64 * scale;
         let height = displays[0].height as f64 * scale;
-        
+
         let mut current = ctx.window().clone();
         current.set_window_state(WindowState::Minimized);
         self.full_screen = true;
@@ -197,6 +197,38 @@ impl Screenshot {
             .resizable(true)
             .set_position((0.0, 0.0))
             .set_always_on_top(true);
+
+        ctx.new_window(new_win);
+    }
+
+    pub fn action_capture(&mut self, ctx: &mut EventCtx){
+        let displays = screenshots::DisplayInfo::all().expect("error");
+        let scale = displays[0].scale_factor as f64;
+        let width = displays[0].width as f64 * scale;
+        let height = displays[0].height as f64 * scale;
+        
+        let mut current = ctx.window().clone();
+        current.set_window_state(WindowState::Minimized);
+        self.full_screen = false;
+
+        self.area.start = Point::new(0.0, 0.0);
+        self.area.end = Point::new(0.0, 0.0);
+        self.area.width = 0.0;
+        self.area.heigth = 0.0;
+        self.area.rgba.reset();
+
+        let container = Either::new(
+            |data: &Screenshot, _: &Env| data.flag_transparency,
+            Container::new(draw_rect()).background(Color::rgba(0.0, 0.0, 0.0, 0.0)),
+            Container::new(draw_rect()).background(Color::rgba(0.0, 0.0, 0.0, 0.6)),
+        );
+
+        let new_win = WindowDesc::new(container)
+            .show_titlebar(false)
+            .transparent(true)
+            .window_size((width, height))
+            .resizable(false)
+            .set_position((0.0, 0.0));
 
         ctx.new_window(new_win);
     }

@@ -1,5 +1,5 @@
 use druid::{
-    commands, AppDelegate, Code, Command, Cursor, DelegateCtx, Env, Event, EventCtx,
+    KeyEvent, KbKey, commands, AppDelegate, Code, Command, Cursor, DelegateCtx, Env, Event, EventCtx,
     FileDialogOptions, FileSpec, Handled, LocalizedString, MouseButton, Point, Target, Widget,
     WindowState,
 };
@@ -464,6 +464,7 @@ impl AppDelegate<Screenshot> for Delegate {
         data: &mut Screenshot,
         _env: &Env,
     ) -> Handled {
+        
         if let Some(file_info) = cmd.get(commands::SAVE_FILE_AS) {
             // let img_bytes: &[u8] = data.img.raw_pixels();
             // if let Err(e) = std::fs::write(file_info.path(), img_bytes) {
@@ -500,3 +501,28 @@ impl AppDelegate<Screenshot> for Delegate {
         Handled::No
     }
 }
+
+// pub struct HotKeyController;
+
+// impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotKeyController {
+//     fn event( 
+//         &mut self, 
+//         child: &mut W, 
+//         ctx: &mut EventCtx, 
+//         event: &Event, 
+//         data: &mut Screenshot, 
+//         _env: &Env, 
+//     ) { 
+//         if let Event::KeyUp(key) = event {
+//             if key.code == Code::Enter {
+//                 if data.new_name.trim() != "" {
+//                     data.name = data.new_name.clone();
+//                     data.new_name = "".to_string();
+//                     Screenshot::toggle_textbox_state(data);
+//                 }
+//             }
+//         }
+//         child.event(ctx, event, data, _env); 
+//     } 
+// }
+

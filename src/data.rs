@@ -2,7 +2,7 @@ use druid::{
     widget::{
         Button, Container, Controller, Either, FillStrat, Flex, Image, Painter, SizedBox, ZStack,
     },
-    BoxConstraints, Color, CursorDesc, Data, Env, Event, EventCtx, ImageBuf, LayoutCtx, Lens,
+    SysMods, HotKey, BoxConstraints, Color, CursorDesc, Data, Env, Event, EventCtx, ImageBuf, LayoutCtx, Lens,
     LifeCycle, LifeCycleCtx, PaintCtx, Point, Rect, RenderContext, Size, TimerToken, UpdateCtx,
     Widget, WidgetExt, WidgetPod, WindowDesc, WindowState,
 };
@@ -46,6 +46,13 @@ impl Format {
             Format::Bmp => ".bmp".to_string(),
         }
     }
+}
+
+#[derive(Clone, Data)]
+pub struct Shortcut{
+    pub save: String,
+    pub save_as: String,
+    pub open: String,
 }
 
 #[derive(Clone, Data, Lens)]
@@ -135,6 +142,7 @@ pub struct Screenshot {
     pub default_save_path: String,
     pub flag_resize: bool,
     pub resized_area: ResizedArea,
+    pub shortcut: Shortcut,
 }
 
 impl Screenshot {
@@ -154,6 +162,7 @@ impl Screenshot {
             default_save_path: "C:/Users/Utente/Pictures".to_string(),
             flag_resize: false,
             resized_area: ResizedArea::new(),
+            shortcut: Shortcut { save: "s".to_string(), save_as: "a".to_string(), open: "o".to_string() },
         }
     }
 
@@ -163,6 +172,33 @@ impl Screenshot {
         } else {
             data.editing_name = true;
         }
+    }
+
+    pub fn action_screen(&mut self, ctx: &mut EventCtx){
+        let displays = screenshots::DisplayInfo::all().expect("error");
+        let scale = displays[0].scale_factor as f64;
+        let width = displays[0].width as f64 * scale;
+        let height = displays[0].height as f64 * scale;
+        
+        let mut current = ctx.window().clone();
+        current.set_window_state(WindowState::Minimized);
+        self.full_screen = true;
+
+        self.area.start = Point::new(0.0, 0.0);
+        self.area.end = Point::new(0.0, 0.0);
+        self.area.width = 0.0;
+        self.area.heigth = 0.0;
+        self.area.rgba.reset();
+
+        let new_win = WindowDesc::new(draw_rect())
+            .show_titlebar(false)
+            .transparent(true)
+            .window_size((width, height))
+            .resizable(true)
+            .set_position((0.0, 0.0))
+            .set_always_on_top(true);
+
+        ctx.new_window(new_win);
     }
 
     pub fn do_screen(&mut self) {

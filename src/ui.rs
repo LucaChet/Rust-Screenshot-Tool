@@ -11,6 +11,7 @@ use druid::{
     WindowDesc, WindowState,
 };
 
+use druid_shell::{HotKey, KbKey, KeyEvent, RawMods, SysMods};
 use druid_widget_nursery::DropdownSelect;
 use image::ImageBuffer;
 
@@ -29,26 +30,27 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
     let mut col = Flex::column().with_child(
         Flex::row()
             .with_child(Button::new("SCREEN 📷").on_click(
-                move |ctx, data: &mut Screenshot, _env| {
-                    let mut current = ctx.window().clone();
-                    current.set_window_state(WindowState::Minimized);
-                    data.full_screen = true;
+                |ctx, data: &mut Screenshot, _env| {
+                // let mut current = ctx.window().clone();
+                // current.set_window_state(WindowState::Minimized);
+                // data.full_screen = true;
 
-                    data.area.start = Point::new(0.0, 0.0);
-                    data.area.end = Point::new(0.0, 0.0);
-                    data.area.width = 0.0;
-                    data.area.heigth = 0.0;
-                    data.area.rgba.reset();
+                // data.area.start = Point::new(0.0, 0.0);
+                // data.area.end = Point::new(0.0, 0.0);
+                // data.area.width = 0.0;
+                // data.area.heigth = 0.0;
+                // data.area.rgba.reset();
 
-                    let new_win = WindowDesc::new(draw_rect())
-                        .show_titlebar(false)
-                        .transparent(true)
-                        .window_size((width, height))
-                        .resizable(true)
-                        .set_position((0.0, 0.0))
-                        .set_always_on_top(true);
+                // let new_win = WindowDesc::new(draw_rect())
+                //     .show_titlebar(false)
+                //     .transparent(true)
+                //     .window_size((width, height))
+                //     .resizable(true)
+                //     .set_position((0.0, 0.0))
+                //     .set_always_on_top(true);
 
-                    ctx.new_window(new_win);
+                // ctx.new_window(new_win);
+                data.action_screen(ctx);
                 },
             ))
             .with_child(Button::new("Capture Area 🖱️").on_click(
@@ -153,7 +155,6 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
 
     ZStack::new(col.with_flex_child(row, FlexParams::new(1.0, CrossAxisAlignment::Start)))
         .with_aligned_child(Padding::new(5., row_timer), UnitPoint::BOTTOM_RIGHT)
-        // .with_aligned_child(Padding::new(5., row2), UnitPoint::BOTTOM_RIGHT)
 }
 
 #[allow(unused_assignments)]
@@ -171,7 +172,7 @@ pub fn menu(_: Option<WindowId>, _state: &Screenshot, _: &Env) -> Menu<Screensho
 
             ctx.submit_command(druid::commands::SHOW_OPEN_PANEL.with(open_dialog_options.clone()))
             }
-        )
+        ).dynamic_hotkey(|data, _env| Some(HotKey::new(SysMods::Cmd, data.shortcut.open.as_str())))
     ).separator()
     .entry(
         MenuItem::new(LocalizedString::new("Save..")).on_activate(
@@ -196,6 +197,7 @@ pub fn menu(_: Option<WindowId>, _state: &Screenshot, _: &Env) -> Menu<Screensho
                     .expect("Errore nel salvataggio automatico!");
             }
         ).enabled_if(|data: &Screenshot, _: &Env| data.name != "")
+        .dynamic_hotkey(|data, _env| Some(HotKey::new(SysMods::Cmd, data.shortcut.save.as_str())))
     )
     .entry(
         MenuItem::new(LocalizedString::new("Save as..")).on_activate(
@@ -221,6 +223,7 @@ pub fn menu(_: Option<WindowId>, _state: &Screenshot, _: &Env) -> Menu<Screensho
                 ctx.submit_command(druid::commands::SHOW_SAVE_PANEL.with(save_dialog_options.clone()))
             }
         ).enabled_if(|data: &Screenshot, _: &Env| data.name != "")
+        .dynamic_hotkey(|data, _env| Some(HotKey::new(SysMods::Cmd, data.shortcut.save_as.as_str())))
     );
 
     let mut format = Menu::new(LocalizedString::new("Format"));
@@ -279,6 +282,13 @@ pub fn menu(_: Option<WindowId>, _state: &Screenshot, _: &Env) -> Menu<Screensho
             }
         )
     );
+
+    // let mut action = Menu::new(LocalizedString::new("Action"));
+    // action = action.entry(MenuItem::new(LocalizedString::new("Screen")).on_activate(
+    //     | |{
+
+    //     }
+    // ));
 
     menu.entry(file).entry(format)
 }

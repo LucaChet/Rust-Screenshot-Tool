@@ -1,5 +1,5 @@
 use druid::{
-    KeyEvent, KbKey, commands, AppDelegate, Code, Command, Cursor, DelegateCtx, Env, Event, EventCtx,
+    Selector, WindowDesc, KeyEvent, KbKey, commands, AppDelegate, Code, Command, Cursor, DelegateCtx, Env, Event, EventCtx,
     FileDialogOptions, FileSpec, Handled, LocalizedString, MouseButton, Point, Target, Widget,
     WindowState,
 };
@@ -8,9 +8,10 @@ use std::time::Duration;
 use druid::widget::Controller;
 use druid_shell::TimerToken;
 
+use crate::ui::*;
 use crate::data::*;
 use image::*;
-
+pub const SHORTCUT: Selector = Selector::new("shortcut_selector");
 pub struct SetScreen;
 
 impl<W: Widget<Screenshot>> Controller<Screenshot, W> for SetScreen {
@@ -458,7 +459,7 @@ pub struct Delegate;
 impl AppDelegate<Screenshot> for Delegate {
     fn command(
         &mut self,
-        _ctx: &mut DelegateCtx,
+        ctx: &mut DelegateCtx,
         _target: Target,
         cmd: &Command,
         data: &mut Screenshot,
@@ -498,6 +499,12 @@ impl AppDelegate<Screenshot> for Delegate {
             }
             return Handled::Yes;
         }
+        if cmd.is(SHORTCUT) {
+            let new_win = WindowDesc::new(modify_shortcut())
+                .title(LocalizedString::new("Shortcut"))
+                .window_size((300.0, 200.0));
+            ctx.new_window(new_win);
+        }
         Handled::No
     }
 
@@ -514,9 +521,31 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotKeyController {
         data: &mut Screenshot, 
         _env: &Env, 
     ) { 
-        if let Event::KeyUp(key) = event {
-            if key.code == Code::Digit0 {
-                data.action_screen(ctx);
+        if let Event::KeyDown(key) = event {
+
+            
+            
+            if key.code == Code::Enter{
+                data.editing_shortcut = false;
+                
+            }else{
+                let code = key.code.to_string().chars().last().unwrap().to_string().to_lowercase();
+                data.new_name = "".to_string();
+                match data.selected_shortcut{
+                    Shortcut::Save => {
+                        data.shortcut.entry(Shortcut::Save).and_modify(|el| *el = code);
+                    }
+                    Shortcut::Open => {
+                        data.shortcut.entry(Shortcut::Open).and_modify(|el| *el = code);
+                        println!("{:?}", data.shortcut.get(&Shortcut::Open).unwrap().as_str());
+                    }
+                    Shortcut::SaveAs => {
+                        data.shortcut.entry(Shortcut::SaveAs).and_modify(|el| *el = code);
+                    }
+                    Shortcut::Quit => {
+                        data.shortcut.entry(Shortcut::Quit).and_modify(|el| *el = code);
+                    }
+                }
             }
         }
         child.event(ctx, event, data, _env); 

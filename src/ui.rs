@@ -11,12 +11,13 @@ use druid::{
     WindowDesc, WindowState,
 };
 
-use druid_shell::{HotKey, KbKey, KeyEvent, RawMods, SysMods};
+use druid_shell::{HotKey, KbKey, KeyEvent, RawMods, SysMods, Application};
 use druid_widget_nursery::DropdownSelect;
 use image::ImageBuffer;
 
 use crate::controller::*;
 use crate::data::*;
+use crate::data::screenshot_derived_lenses::shortcut;
 
 // use crate::saver::Saver;
 
@@ -126,7 +127,7 @@ pub fn menu(_: Option<WindowId>, _state: &Screenshot, _: &Env) -> Menu<Screensho
 
             ctx.submit_command(druid::commands::SHOW_OPEN_PANEL.with(open_dialog_options.clone()))
             }
-        ).dynamic_hotkey(|data, _env| Some(HotKey::new(SysMods::Cmd, data.shortcut.open.as_str())))
+        ).dynamic_hotkey(|data, _env| Some(HotKey::new(SysMods::Cmd, data.shortcut.get(&Shortcut::Open).unwrap().as_str())))
     ).separator()
     .entry(
         MenuItem::new(LocalizedString::new("Save..")).on_activate(
@@ -151,7 +152,7 @@ pub fn menu(_: Option<WindowId>, _state: &Screenshot, _: &Env) -> Menu<Screensho
                     .expect("Errore nel salvataggio automatico!");
             }
         ).enabled_if(|data: &Screenshot, _: &Env| data.name != "")
-        .dynamic_hotkey(|data, _env| Some(HotKey::new(SysMods::Cmd, data.shortcut.save.as_str())))
+        .dynamic_hotkey(|data, _env| Some(HotKey::new(SysMods::Cmd, data.shortcut.get(&Shortcut::Save).unwrap().as_str())))
     )
     .entry(
         MenuItem::new(LocalizedString::new("Save as..")).on_activate(
@@ -177,7 +178,14 @@ pub fn menu(_: Option<WindowId>, _state: &Screenshot, _: &Env) -> Menu<Screensho
                 ctx.submit_command(druid::commands::SHOW_SAVE_PANEL.with(save_dialog_options.clone()))
             }
         ).enabled_if(|data: &Screenshot, _: &Env| data.name != "")
-        .dynamic_hotkey(|data, _env| Some(HotKey::new(SysMods::Cmd, data.shortcut.save_as.as_str())))
+        .dynamic_hotkey(|data, _env| Some(HotKey::new(SysMods::Cmd, data.shortcut.get(&Shortcut::SaveAs).unwrap().as_str())))
+    )
+    .entry(
+        MenuItem::new(LocalizedString::new("Quit")).on_activate(
+            |_ctx, _data: &mut Screenshot, _env|{
+                Application::global().quit();
+            })
+            .dynamic_hotkey(|data, _env| Some(HotKey::new(SysMods::Cmd, data.shortcut.get(&Shortcut::Quit).unwrap().as_str())))
     );
 
     let mut format = Menu::new(LocalizedString::new("Format"));
@@ -238,11 +246,40 @@ pub fn menu(_: Option<WindowId>, _state: &Screenshot, _: &Env) -> Menu<Screensho
     );
 
     let mut action = Menu::new(LocalizedString::new("Action"));
-    action = action.entry(MenuItem::new(LocalizedString::new("Screen")).on_activate(
-        |_ctx, data: &mut Screenshot, _env|{
-
+    action = action.entry(MenuItem::new(LocalizedString::new("Shortcut")).on_activate(
+        |ctx, data: &mut Screenshot, _env|{
+            data.editing_shortcut = true;
+            ctx.submit_command(SHORTCUT)   
         }
-    ));
+    ).dynamic_hotkey(|data, _env| Some(HotKey::new(SysMods::Cmd, "k"))));
 
-    menu.entry(file).entry(format)
+    menu.entry(file).entry(format).entry(action)
+}
+
+pub fn modify_shortcut() -> impl Widget<Screenshot> {
+    let dropdown = DropdownSelect::new(vec![
+        ("Save", Shortcut::Save),
+        ("Save as", Shortcut::SaveAs),
+        ("Choose default path", Shortcut::Open),
+        ("Quit", Shortcut::Quit),
+    ])
+    .lens(Screenshot::selected_shortcut)
+    .align_right();
+
+    let mut col = Flex::column();
+   
+    // let label1 = Label::new(|data: &Screenshot, _: &Env|format!("Save: Ctrl+{}", data.shortcut.save));
+    let textbox = 
+    Either::new(|data, _: &Env| data.editing_shortcut,
+        TextBox::new()
+        .with_placeholder("Ctrl+")
+        .lens(Screenshot::new_name)
+        .controller(HotKeyController),
+        Label::new(""));
+
+    let mut row1 = Flex::row();
+    row1.add_child(dropdown);
+    row1.add_child(textbox);
+    col.add_child(row1);
+    col
 }

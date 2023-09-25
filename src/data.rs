@@ -1,11 +1,12 @@
 use druid::{
     widget::{
-        Button, Container, Controller, Either, FillStrat, Flex, Image, Painter, SizedBox, ZStack,
+        Button, Container, Controller, Either, FillStrat, Flex, Image, Painter, SizedBox, ZStack, List,
     },
     SysMods, HotKey, BoxConstraints, Color, CursorDesc, Data, Env, Event, EventCtx, ImageBuf, LayoutCtx, Lens,
     LifeCycle, LifeCycleCtx, PaintCtx, Point, Rect, RenderContext, Size, TimerToken, UpdateCtx,
     Widget, WidgetExt, WidgetPod, WindowDesc, WindowState,
 };
+use im::{Vector, HashMap};
 // use druid_shell::{TimerToken};
 
 use crate::controller::*;
@@ -15,7 +16,7 @@ use image::{codecs::png::PngDecoder, *};
 use raster::{transform, Color as rasterColor, Image as rasterImage};
 use screenshots::Screen;
 use serde::{Deserialize, Serialize};
-use std::borrow::Cow;
+use std::{borrow::Cow, hash::Hash};
 
 use self::selected_area_derived_lenses::heigth;
 
@@ -48,11 +49,19 @@ impl Format {
     }
 }
 
-#[derive(Clone, Data)]
-pub struct Shortcut{
-    pub save: String,
-    pub save_as: String,
-    pub open: String,
+// #[derive(Clone, Data)]
+// pub struct Shortcut{
+//     pub save: String,
+//     pub save_as: String,
+//     pub open: String,
+// }
+
+#[derive(Clone, Data, PartialEq, Eq, Debug, Serialize, Deserialize, Hash)]
+pub enum Shortcut{
+    Save,
+    SaveAs,
+    Open,
+    Quit,
 }
 
 #[derive(Clone, Data, Lens)]
@@ -142,11 +151,19 @@ pub struct Screenshot {
     pub default_save_path: String,
     pub flag_resize: bool,
     pub resized_area: ResizedArea,
-    pub shortcut: Shortcut,
+    pub shortcut: HashMap<Shortcut, String>,
+    pub selected_shortcut: Shortcut,
+    pub editing_shortcut: bool,
 }
 
 impl Screenshot {
     pub fn new(name: String, format: Format, newname: String) -> Self {
+        let mut shortcut = HashMap::new();
+        shortcut.insert(Shortcut::Save, String::from("s"));
+        shortcut.insert(Shortcut::SaveAs, String::from("a"));
+        shortcut.insert(Shortcut::Open, String::from("o"));
+        shortcut.insert(Shortcut::Quit, String::from("q"));
+
         Self {
             name,
             format,
@@ -162,7 +179,10 @@ impl Screenshot {
             default_save_path: "C:/Users/Utente/Pictures".to_string(),
             flag_resize: false,
             resized_area: ResizedArea::new(),
-            shortcut: Shortcut { save: "s".to_string(), save_as: "a".to_string(), open: "o".to_string() },
+            // shortcut: Shortcut { save: "s".to_string(), save_as: "a".to_string(), open: "o".to_string() },
+            shortcut,
+            selected_shortcut: Shortcut::Save,
+            editing_shortcut: true,
         }
     }
 
@@ -206,7 +226,7 @@ impl Screenshot {
         let scale = displays[0].scale_factor as f64;
         let width = displays[0].width as f64 * scale;
         let height = displays[0].height as f64 * scale;
-        
+
         let mut current = ctx.window().clone();
         current.set_window_state(WindowState::Minimized);
         self.full_screen = false;

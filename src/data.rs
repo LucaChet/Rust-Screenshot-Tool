@@ -151,6 +151,7 @@ pub struct Screenshot {
     pub selected_shortcut: Shortcut,
     pub editing_shortcut: bool,
     pub duplicate_shortcut: bool,
+    pub monitor_id: usize,
 }
 
 impl Screenshot {
@@ -183,6 +184,7 @@ impl Screenshot {
             selected_shortcut: Shortcut::Save,
             editing_shortcut: true,
             duplicate_shortcut: false,
+            monitor_id: 0,
         }
     }
 
@@ -196,9 +198,9 @@ impl Screenshot {
 
     pub fn action_screen(&mut self, ctx: &mut EventCtx){
         let displays = screenshots::DisplayInfo::all().expect("error");
-        let scale = displays[0].scale_factor as f64;
-        let width = displays[0].width as f64 * scale;
-        let height = displays[0].height as f64 * scale;
+        let scale = displays[self.monitor_id].scale_factor as f64;
+        let width = displays[self.monitor_id].width as f64 * scale;
+        let height = displays[self.monitor_id].height as f64 * scale;
 
         let mut current = ctx.window().clone();
         current.set_window_state(WindowState::Minimized);
@@ -223,9 +225,9 @@ impl Screenshot {
 
     pub fn action_capture(&mut self, ctx: &mut EventCtx){
         let displays = screenshots::DisplayInfo::all().expect("error");
-        let scale = displays[0].scale_factor as f64;
-        let width = displays[0].width as f64 * scale;
-        let height = displays[0].height as f64 * scale;
+        let scale = displays[self.monitor_id].scale_factor as f64;
+        let width = displays[self.monitor_id].width as f64 * scale;
+        let height = displays[self.monitor_id].height as f64 * scale;
 
         let mut current = ctx.window().clone();
         current.set_window_state(WindowState::Minimized);
@@ -255,7 +257,7 @@ impl Screenshot {
 
     pub fn do_screen(&mut self) {
         let screens = Screen::all().unwrap();
-        let image: ImageBuffer<Rgba<u8>, Vec<u8>> = screens[0].capture().unwrap();
+        let image: ImageBuffer<Rgba<u8>, Vec<u8>> = screens[self.monitor_id].capture().unwrap();
         let time: String = chrono::offset::Utc::now().to_string();
 
         self.name = time;
@@ -277,9 +279,9 @@ impl Screenshot {
     }
 
     pub fn do_screen_area(&mut self) {
-        let screen = Screen::from_point(0, 0).unwrap();
+        let screens = Screen::all().unwrap();
 
-        let image = screen
+        let image = screens[self.monitor_id]
             .capture_area(
                 ((self.area.start.x) * self.area.scale) as i32,
                 ((self.area.start.y) * self.area.scale) as i32,

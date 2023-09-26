@@ -248,7 +248,22 @@ pub fn menu(_: Option<WindowId>, _state: &Screenshot, _: &Env) -> Menu<Screensho
         }
     ).dynamic_hotkey(|data, _env| Some(HotKey::new(SysMods::Cmd, data.shortcut.get(&Shortcut::Customize).unwrap().as_str()))));
 
-    menu.entry(file).entry(format).entry(action)
+    let mut monitor: Menu<Screenshot> = Menu::new(LocalizedString::new("Monitor"));
+    let n_displays = screenshots::DisplayInfo::all().expect("error").len();
+
+    for i in 0..n_displays{
+        monitor = monitor.entry(MenuItem::new(format!("display {}",i+1).as_str()).on_activate(
+            move |_ctx, data: &mut Screenshot, _env|{
+                data.monitor_id = i;
+                let displays = screenshots::DisplayInfo::all().expect("error");
+                data.area.scale = displays[i].scale_factor as f64;
+            }
+        ).selected_if(move |data, _:&Env|data.monitor_id == i));
+    }
+    
+    
+
+    menu.entry(file).entry(format).entry(action).entry(monitor)
 }
 
 pub fn modify_shortcut() -> impl Widget<Screenshot> {

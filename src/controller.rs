@@ -524,26 +524,29 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotKeyController {
         if let Event::KeyDown(key) = event {
 
             
-            
             if key.code == Code::Enter{
                 data.editing_shortcut = false;
-                
+                ctx.window().close();
             }else{
-                let code = key.code.to_string().chars().last().unwrap().to_string().to_lowercase();
-                data.new_name = "".to_string();
-                match data.selected_shortcut{
-                    Shortcut::Save => {
-                        data.shortcut.entry(Shortcut::Save).and_modify(|el| *el = code);
-                    }
-                    Shortcut::Open => {
-                        data.shortcut.entry(Shortcut::Open).and_modify(|el| *el = code);
-                        println!("{:?}", data.shortcut.get(&Shortcut::Open).unwrap().as_str());
-                    }
-                    Shortcut::SaveAs => {
-                        data.shortcut.entry(Shortcut::SaveAs).and_modify(|el| *el = code);
-                    }
-                    Shortcut::Quit => {
-                        data.shortcut.entry(Shortcut::Quit).and_modify(|el| *el = code);
+                if (key.code.to_string() >= "Digit0".to_string() && key.code.to_string() <= "Digit9".to_string())
+                || (key.code.to_string() >= "KeyA".to_string() && key.code.to_string() <= "KeyZ".to_string()){
+                    
+                    let code = key.code.to_string().chars().last().unwrap().to_string().to_lowercase();
+                    data.new_name = "".to_string();
+                    match data.selected_shortcut{
+                        Shortcut::Save => {
+                            data.shortcut.entry(Shortcut::Save).and_modify(|el| *el = code);
+                        }
+                        Shortcut::Open => {
+                            data.shortcut.entry(Shortcut::Open).and_modify(|el| *el = code);
+                            println!("{:?}", data.shortcut.get(&Shortcut::Open).unwrap().as_str());
+                        }
+                        Shortcut::SaveAs => {
+                            data.shortcut.entry(Shortcut::SaveAs).and_modify(|el| *el = code);
+                        }
+                        Shortcut::Quit => {
+                            data.shortcut.entry(Shortcut::Quit).and_modify(|el| *el = code);
+                        }
                     }
                 }
             }

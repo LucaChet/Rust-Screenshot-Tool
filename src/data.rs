@@ -49,13 +49,6 @@ impl Format {
     }
 }
 
-// #[derive(Clone, Data)]
-// pub struct Shortcut{
-//     pub save: String,
-//     pub save_as: String,
-//     pub open: String,
-// }
-
 #[derive(Clone, Data, PartialEq, Eq, Debug, Serialize, Deserialize, Hash)]
 pub enum Shortcut{
     Save,
@@ -179,7 +172,6 @@ impl Screenshot {
             default_save_path: "C:/Users/Utente/Pictures".to_string(),
             flag_resize: false,
             resized_area: ResizedArea::new(),
-            // shortcut: Shortcut { save: "s".to_string(), save_as: "a".to_string(), open: "o".to_string() },
             shortcut,
             selected_shortcut: Shortcut::Save,
             editing_shortcut: true,

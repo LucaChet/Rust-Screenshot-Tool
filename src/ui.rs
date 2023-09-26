@@ -109,7 +109,6 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
 
     ZStack::new(col.with_flex_child(row, FlexParams::new(1.0, CrossAxisAlignment::Start)))
         .with_aligned_child(Padding::new(5., row_timer), UnitPoint::BOTTOM_RIGHT)
-        .controller(HotKeyController)
 }
 
 #[allow(unused_assignments)]
@@ -249,6 +248,7 @@ pub fn menu(_: Option<WindowId>, _state: &Screenshot, _: &Env) -> Menu<Screensho
     action = action.entry(MenuItem::new(LocalizedString::new("Shortcut")).on_activate(
         |ctx, data: &mut Screenshot, _env|{
             data.editing_shortcut = true;
+            data.new_name = "".to_string();
             ctx.submit_command(SHORTCUT)   
         }
     ).dynamic_hotkey(|data, _env| Some(HotKey::new(SysMods::Cmd, "k"))));
@@ -268,7 +268,6 @@ pub fn modify_shortcut() -> impl Widget<Screenshot> {
 
     let mut col = Flex::column();
    
-    // let label1 = Label::new(|data: &Screenshot, _: &Env|format!("Save: Ctrl+{}", data.shortcut.save));
     let textbox = 
     Either::new(|data, _: &Env| data.editing_shortcut,
         TextBox::new()
@@ -277,9 +276,14 @@ pub fn modify_shortcut() -> impl Widget<Screenshot> {
         .controller(HotKeyController),
         Label::new(""));
 
+    let row0 = Flex::row().with_child(Label::new("Type the key to associate with ctrl.
+Only letters or numbers are allowed.
+Type enter to update\n")).center();
+
     let mut row1 = Flex::row();
     row1.add_child(dropdown);
     row1.add_child(textbox);
+    col.add_child(row0);
     col.add_child(row1);
     col
 }

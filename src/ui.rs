@@ -14,7 +14,7 @@ use druid::{
 use druid::keyboard_types::Key;
 
 use druid_shell::{HotKey, KbKey, KeyEvent, RawMods, SysMods, Application};
-use druid_widget_nursery::DropdownSelect;
+use druid_widget_nursery::{DropdownSelect, WidgetExt as _};
 use image::ImageBuffer;
 
 use crate::controller::*;
@@ -27,12 +27,16 @@ use crate::data::screenshot_derived_lenses::shortcut;
 pub fn ui_builder() -> impl Widget<Screenshot> {
     let mut col = Flex::column().with_child(
         Flex::row()
-            .with_child(Button::new(|data: &Screenshot, _:&Env| format!("📷  (Ctrl+{})", data.shortcut.get(&Shortcut::Screenshot).unwrap().to_uppercase().as_str())).on_click(
+            .with_child(Button::new(|data: &Screenshot, _:&Env| format!("📷  (Ctrl+{})", data.shortcut.get(&Shortcut::Screenshot).unwrap().to_uppercase().as_str()))
+            .tooltip("Screen")
+            .on_click(
                 |ctx, data: &mut Screenshot, _env| {
                     data.action_screen(ctx);
                 },
             ))
-            .with_child(Button::new(|data: &Screenshot, _:&Env| format!("🖱️  (Ctrl+{})", data.shortcut.get(&Shortcut::Capture).unwrap().to_uppercase().as_str())).on_click(
+            .with_child(Button::new(|data: &Screenshot, _:&Env| format!("🖱️  (Ctrl+{})", data.shortcut.get(&Shortcut::Capture).unwrap().to_uppercase().as_str()))
+            .tooltip("Capture Area")
+            .on_click(
                 |ctx: &mut EventCtx, data: &mut Screenshot, _env| {
                     data.action_capture(ctx);
                 },
@@ -122,7 +126,7 @@ pub fn menu(_: Option<WindowId>, _state: &Screenshot, _: &Env) -> Menu<Screensho
                 ctx.submit_command(druid::commands::SHOW_OPEN_PANEL.with(open_dialog_options.clone()))
             }
         ).dynamic_hotkey(|data, _env| Some(HotKey::new(SysMods::Cmd, data.shortcut.get(&Shortcut::Open).unwrap().as_str())))
-    ).separator()
+    )
     .entry(
         MenuItem::new(LocalizedString::new("Save..")).on_activate(
             |_ctx, data: &mut Screenshot, _env|{
@@ -174,6 +178,14 @@ pub fn menu(_: Option<WindowId>, _state: &Screenshot, _: &Env) -> Menu<Screensho
         ).enabled_if(|data: &Screenshot, _: &Env| data.name != "")
         .dynamic_hotkey(|data, _env| Some(HotKey::new(SysMods::Cmd, data.shortcut.get(&Shortcut::SaveAs).unwrap().as_str())))
     )
+    .entry(MenuItem::new(LocalizedString::new("Customize shortcut..")).on_activate(
+        |ctx, data: &mut Screenshot, _env|{
+            data.editing_shortcut = true;
+            data.new_name = "".to_string();
+            ctx.submit_command(SHORTCUT)   
+        }
+    ).dynamic_hotkey(|data, _env| Some(HotKey::new(SysMods::Cmd, data.shortcut.get(&Shortcut::Customize).unwrap().as_str())))
+).separator()
     .entry(
         MenuItem::new(LocalizedString::new("Quit")).on_activate(
             |_ctx, _data: &mut Screenshot, _env|{
@@ -239,15 +251,6 @@ pub fn menu(_: Option<WindowId>, _state: &Screenshot, _: &Env) -> Menu<Screensho
         )
     );
 
-    let mut action = Menu::new(LocalizedString::new("Action"));
-    action = action.entry(MenuItem::new(LocalizedString::new("Shortcut")).on_activate(
-        |ctx, data: &mut Screenshot, _env|{
-            data.editing_shortcut = true;
-            data.new_name = "".to_string();
-            ctx.submit_command(SHORTCUT)   
-        }
-    ).dynamic_hotkey(|data, _env| Some(HotKey::new(SysMods::Cmd, data.shortcut.get(&Shortcut::Customize).unwrap().as_str()))));
-
     let mut monitor: Menu<Screenshot> = Menu::new(LocalizedString::new("Monitor"));
     let n_displays = screenshots::DisplayInfo::all().expect("error").len();
 
@@ -261,9 +264,7 @@ pub fn menu(_: Option<WindowId>, _state: &Screenshot, _: &Env) -> Menu<Screensho
         ).selected_if(move |data, _:&Env|data.monitor_id == i));
     }
     
-    
-
-    menu.entry(file).entry(format).entry(action).entry(monitor)
+    menu.entry(file).entry(format).entry(monitor)
 }
 
 pub fn modify_shortcut() -> impl Widget<Screenshot> {

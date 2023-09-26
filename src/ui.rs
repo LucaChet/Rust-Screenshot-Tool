@@ -11,6 +11,8 @@ use druid::{
     WindowDesc, WindowState,
 };
 
+use druid::keyboard_types::Key;
+
 use druid_shell::{HotKey, KbKey, KeyEvent, RawMods, SysMods, Application};
 use druid_widget_nursery::DropdownSelect;
 use image::ImageBuffer;
@@ -25,12 +27,12 @@ use crate::data::screenshot_derived_lenses::shortcut;
 pub fn ui_builder() -> impl Widget<Screenshot> {
     let mut col = Flex::column().with_child(
         Flex::row()
-            .with_child(Button::new("SCREEN 📷").on_click(
+            .with_child(Button::new(|data: &Screenshot, _:&Env| format!("📷  (Ctrl+{})", data.shortcut.get(&Shortcut::Screenshot).unwrap().to_uppercase().as_str())).on_click(
                 |ctx, data: &mut Screenshot, _env| {
                     data.action_screen(ctx);
                 },
             ))
-            .with_child(Button::new("Capture Area 🖱️").on_click(
+            .with_child(Button::new(|data: &Screenshot, _:&Env| format!("🖱️  (Ctrl+{})", data.shortcut.get(&Shortcut::Capture).unwrap().to_uppercase().as_str())).on_click(
                 |ctx: &mut EventCtx, data: &mut Screenshot, _env| {
                     data.action_capture(ctx);
                 },
@@ -90,15 +92,6 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
         }),
     );
 
-    // let dropdown = DropdownSelect::new(vec![
-    //     ("Png", Format::Png),
-    //     ("Jpg", Format::Jpg),
-    //     ("Gif", Format::Gif),
-    // ])
-    // .lens(Screenshot::format)
-    // .disabled_if(|data: &Screenshot, _: &Env| data.name == "")
-    // .align_right();
-
     row.add_child(screen_name);
     row.add_child(button_modifica);
     row.add_child(gestisci_screen);
@@ -109,6 +102,8 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
 
     ZStack::new(col.with_flex_child(row, FlexParams::new(1.0, CrossAxisAlignment::Start)))
         .with_aligned_child(Padding::new(5., row_timer), UnitPoint::BOTTOM_RIGHT)
+        .controller(HotkeyScreen {flag_ctrl: false})
+
 }
 
 #[allow(unused_assignments)]
@@ -124,7 +119,7 @@ pub fn menu(_: Option<WindowId>, _state: &Screenshot, _: &Env) -> Menu<Screensho
                 .select_directories()
                 .button_text("Open");
 
-            ctx.submit_command(druid::commands::SHOW_OPEN_PANEL.with(open_dialog_options.clone()))
+                ctx.submit_command(druid::commands::SHOW_OPEN_PANEL.with(open_dialog_options.clone()))
             }
         ).dynamic_hotkey(|data, _env| Some(HotKey::new(SysMods::Cmd, data.shortcut.get(&Shortcut::Open).unwrap().as_str())))
     ).separator()
@@ -251,7 +246,7 @@ pub fn menu(_: Option<WindowId>, _state: &Screenshot, _: &Env) -> Menu<Screensho
             data.new_name = "".to_string();
             ctx.submit_command(SHORTCUT)   
         }
-    ).dynamic_hotkey(|data, _env| Some(HotKey::new(SysMods::Cmd, "k"))));
+    ).dynamic_hotkey(|data, _env| Some(HotKey::new(SysMods::Cmd, data.shortcut.get(&Shortcut::Customize).unwrap().as_str()))));
 
     menu.entry(file).entry(format).entry(action)
 }
@@ -261,6 +256,9 @@ pub fn modify_shortcut() -> impl Widget<Screenshot> {
         ("Save", Shortcut::Save),
         ("Save as", Shortcut::SaveAs),
         ("Choose default path", Shortcut::Open),
+        ("Customize", Shortcut::Customize),
+        ("Screenshot", Shortcut::Screenshot),
+        ("Capture", Shortcut::Capture),
         ("Quit", Shortcut::Quit),
     ])
     .lens(Screenshot::selected_shortcut)
@@ -280,10 +278,18 @@ pub fn modify_shortcut() -> impl Widget<Screenshot> {
 Only letters or numbers are allowed.
 Type enter to update\n")).center();
 
+    let row_alert = Flex::row().with_child(Either::new(
+        |data: &Screenshot, _: &Env| data.duplicate_shortcut,
+        Label::new("⚠️ALREADY EXISTS!⚠️").border(Color::RED, 2.).background(Color::GRAY).center(),
+        Label::new(""),
+    ));
+
     let mut row1 = Flex::row();
     row1.add_child(dropdown);
     row1.add_child(textbox);
     col.add_child(row0);
     col.add_child(row1);
+    col.add_default_spacer();
+    col.add_child(row_alert);
     col
 }

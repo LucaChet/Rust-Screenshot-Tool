@@ -2,7 +2,7 @@ use druid::{
     widget::{
         Button, Container, Controller, Either, FillStrat, Flex, Image, Painter, SizedBox, ZStack, List,
     },
-    SysMods, HotKey, BoxConstraints, Color, CursorDesc, Data, Env, Event, EventCtx, ImageBuf, LayoutCtx, Lens,
+    Code, SysMods, HotKey, BoxConstraints, Color, CursorDesc, Data, Env, Event, EventCtx, ImageBuf, LayoutCtx, Lens,
     LifeCycle, LifeCycleCtx, PaintCtx, Point, Rect, RenderContext, Size, TimerToken, UpdateCtx,
     Widget, WidgetExt, WidgetPod, WindowDesc, WindowState,
 };
@@ -54,6 +54,9 @@ pub enum Shortcut{
     Save,
     SaveAs,
     Open,
+    Customize,
+    Screenshot,
+    Capture,
     Quit,
 }
 
@@ -147,6 +150,7 @@ pub struct Screenshot {
     pub shortcut: HashMap<Shortcut, String>,
     pub selected_shortcut: Shortcut,
     pub editing_shortcut: bool,
+    pub duplicate_shortcut: bool,
 }
 
 impl Screenshot {
@@ -155,6 +159,9 @@ impl Screenshot {
         shortcut.insert(Shortcut::Save, String::from("s"));
         shortcut.insert(Shortcut::SaveAs, String::from("a"));
         shortcut.insert(Shortcut::Open, String::from("o"));
+        shortcut.insert(Shortcut::Customize, String::from("k"));
+        shortcut.insert(Shortcut::Screenshot, String::from("t"));
+        shortcut.insert(Shortcut::Capture, String::from("y"));
         shortcut.insert(Shortcut::Quit, String::from("q"));
 
         Self {
@@ -175,6 +182,7 @@ impl Screenshot {
             shortcut,
             selected_shortcut: Shortcut::Save,
             editing_shortcut: true,
+            duplicate_shortcut: false,
         }
     }
 
@@ -338,6 +346,7 @@ impl Screenshot {
         self.resized_area.width = new_width;
         self.resized_area.height = new_height;
     }
+
 }
 
 pub fn show_screen(

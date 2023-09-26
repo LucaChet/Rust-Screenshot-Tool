@@ -502,7 +502,7 @@ impl AppDelegate<Screenshot> for Delegate {
         if cmd.is(SHORTCUT) {
             let new_win = WindowDesc::new(modify_shortcut())
                 .title(LocalizedString::new("Shortcut"))
-                .window_size((300.0, 200.0));
+                .window_size((400.0, 300.0));
             ctx.new_window(new_win);
         }
         Handled::No
@@ -523,7 +523,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotKeyController {
     ) { 
         if let Event::KeyDown(key) = event {
 
-            
+            data.duplicate_shortcut = false;
             if key.code == Code::Enter{
                 data.editing_shortcut = false;
                 ctx.window().close();
@@ -533,19 +533,36 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotKeyController {
                     
                     let code = key.code.to_string().chars().last().unwrap().to_string().to_lowercase();
                     data.new_name = "".to_string();
-                    match data.selected_shortcut{
-                        Shortcut::Save => {
-                            data.shortcut.entry(Shortcut::Save).and_modify(|el| *el = code);
+
+                    for val in data.shortcut.values(){
+                        if code == *val{
+                            data.duplicate_shortcut = true;
                         }
-                        Shortcut::Open => {
-                            data.shortcut.entry(Shortcut::Open).and_modify(|el| *el = code);
-                            println!("{:?}", data.shortcut.get(&Shortcut::Open).unwrap().as_str());
-                        }
-                        Shortcut::SaveAs => {
-                            data.shortcut.entry(Shortcut::SaveAs).and_modify(|el| *el = code);
-                        }
-                        Shortcut::Quit => {
-                            data.shortcut.entry(Shortcut::Quit).and_modify(|el| *el = code);
+                    }
+
+                    if !data.duplicate_shortcut{
+                        match data.selected_shortcut{
+                            Shortcut::Save => {
+                                data.shortcut.entry(Shortcut::Save).and_modify(|el| *el = code);
+                            }
+                            Shortcut::Open => {
+                                data.shortcut.entry(Shortcut::Open).and_modify(|el| *el = code);
+                            }
+                            Shortcut::SaveAs => {
+                                data.shortcut.entry(Shortcut::SaveAs).and_modify(|el| *el = code);
+                            }
+                            Shortcut::Quit => {
+                                data.shortcut.entry(Shortcut::Quit).and_modify(|el| *el = code);
+                            }
+                            Shortcut::Customize => {
+                                data.shortcut.entry(Shortcut::Customize).and_modify(|el| *el = code);
+                            }
+                            Shortcut::Screenshot => {
+                                data.shortcut.entry(Shortcut::Screenshot).and_modify(|el| *el = code);
+                            }
+                            Shortcut::Capture => {
+                                data.shortcut.entry(Shortcut::Capture).and_modify(|el| *el = code);
+                            }
                         }
                     }
                 }
@@ -555,3 +572,50 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotKeyController {
     } 
 }
 
+pub struct HotkeyScreen{
+    pub flag_ctrl: bool,
+}
+
+impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
+    fn event( 
+        &mut self, 
+        child: &mut W, 
+        ctx: &mut EventCtx, 
+        event: &Event, 
+        data: &mut Screenshot, 
+        _env: &Env, 
+    ) { 
+        let mut code = "".to_string();
+        ctx.request_focus();
+
+        if let Event::KeyDown(key) = event {
+            if key.code == Code::ControlLeft{
+                self.flag_ctrl = true;
+            }
+        }
+
+        if let Event::KeyUp(key) = event {
+            if key.code == Code::ControlLeft{
+                self.flag_ctrl = false;
+            }
+        }
+
+        if let Event::KeyDown(key) = event{
+            let screen = data.shortcut.get(&Shortcut::Screenshot).unwrap().as_str();
+            let capture = data.shortcut.get(&Shortcut::Capture).unwrap().as_str();
+
+            if (key.code.to_string() >= "Digit0".to_string() && key.code.to_string() <= "Digit9".to_string())
+            || (key.code.to_string() >= "KeyA".to_string() && key.code.to_string() <= "KeyZ".to_string()){
+                code = key.code.to_string().chars().last().unwrap().to_string().to_lowercase();
+            }
+
+            if code == screen && self.flag_ctrl{
+                data.action_screen(ctx);
+            }else if code == capture && self.flag_ctrl{
+                data.action_capture(ctx);
+            }
+        }
+
+        child.event(ctx, event, data, _env);
+    }
+}

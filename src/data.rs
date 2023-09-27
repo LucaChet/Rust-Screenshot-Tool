@@ -199,9 +199,9 @@ impl Screenshot {
 
     pub fn action_screen(&mut self, ctx: &mut EventCtx){
         let displays = screenshots::DisplayInfo::all().expect("error");
-        let scale = displays[self.monitor_id].scale_factor as f64;
-        let width = displays[self.monitor_id].width as f64 * scale;
-        let height = displays[self.monitor_id].height as f64 * scale;
+        let scale = displays[0].scale_factor as f64;
+        let width = displays[0].width as f64 * scale;
+        let height = displays[0].height as f64 * scale;
 
         let mut current = ctx.window().clone();
         current.set_window_state(WindowState::Minimized);
@@ -217,6 +217,7 @@ impl Screenshot {
             .show_titlebar(false)
             .transparent(true)
             .window_size((width, height))
+            // .set_window_state(WindowState::Maximized)
             .resizable(true)
             .set_position((0.0, 0.0))
             .set_always_on_top(true);
@@ -246,14 +247,23 @@ impl Screenshot {
             Container::new(draw_rect()).background(Color::rgba(0.0, 0.0, 0.0, 0.6)),
         );
 
+        let container2 = Either::new(
+            |data: &Screenshot, _: &Env| data.flag_transparency,
+            Container::new(draw_rect()).background(Color::rgba(0.0, 0.0, 0.0, 0.0)),
+            Container::new(draw_rect()).background(Color::rgba(0.0, 0.0, 0.0, 0.6)),
+        );
+
         let stack = Either::new(
-            |data: &Screenshot, _: &Env| data.monitor_id == 1,
+            |data: &Screenshot, _: &Env| data.monitor_id == 0,
             container,
             {
-                self.do_screen();
-                let img = Image::new(self.img.clone()).fill_mode(FillStrat::ScaleDown);
-                // let sizedbox = SizedBox::new(img).width(800.).height(500.);
-                Flex::column().with_child(ZStack::new(img).border(Color::RED, 2.0).fix_size(width/scale, height/scale).center()).center()
+                // self.do_screen();
+                
+                let img = Image::new(self.img.clone());
+                let sizedbox = SizedBox::new(Flex::column().with_child(img)).fix_size(width, height);
+                let col = ZStack::new(sizedbox)
+                .with_centered_child(container2);
+                col
             }
         ).center();
 
@@ -261,9 +271,9 @@ impl Screenshot {
             .show_titlebar(false)
             .transparent(true)
             .window_size((width, height))
-            .resizable(false)
-            // .set_window_state(WindowState::Maximized)
-            .set_position((0.0, 0.0));
+            .resizable(false);
+            // .set_window_state(WindowState::Maximized);
+            // .set_position((0.0, 0.0));
 
         ctx.new_window(new_win);
     }
@@ -293,8 +303,7 @@ impl Screenshot {
 
     pub fn do_screen_area(&mut self) {
         let screens = Screen::all().unwrap();
-
-        let image = screens[self.monitor_id]
+        let image = screens[0]
             .capture_area(
                 ((self.area.start.x) * self.area.scale) as i32,
                 ((self.area.start.y) * self.area.scale) as i32,

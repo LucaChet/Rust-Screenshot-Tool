@@ -28,14 +28,14 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
     let mut col = Flex::column().with_child(
         Flex::row()
             .with_child(Button::new(|data: &Screenshot, _:&Env| format!("📷  (Ctrl+{})", data.shortcut.get(&Shortcut::Screenshot).unwrap().to_uppercase().as_str()))
-            .tooltip("Screen")
+            // .tooltip("Screen")
             .on_click(
                 |ctx, data: &mut Screenshot, _env| {
                     data.action_screen(ctx);
                 },
             ))
             .with_child(Button::new(|data: &Screenshot, _:&Env| format!("🖱️  (Ctrl+{})", data.shortcut.get(&Shortcut::Capture).unwrap().to_uppercase().as_str()))
-            .tooltip("Capture Area")
+            // .tooltip("Capture Area")
             .on_click(
                 |ctx: &mut EventCtx, data: &mut Screenshot, _env| {
                     data.action_capture(ctx);
@@ -258,8 +258,6 @@ pub fn menu(_: Option<WindowId>, _state: &Screenshot, _: &Env) -> Menu<Screensho
         monitor = monitor.entry(MenuItem::new(format!("display {}",i+1).as_str()).on_activate(
             move |_ctx, data: &mut Screenshot, _env|{
                 data.monitor_id = i;
-                let displays = screenshots::DisplayInfo::all().expect("error");
-                data.area.scale = displays[i].scale_factor as f64;
             }
         ).selected_if(move |data, _:&Env|data.monitor_id == i));
     }

@@ -119,7 +119,9 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
                 self.flag = false;
                 current.set_window_state(WindowState::Minimized);
             } else if self.flag {
+                self.t1 = ctx.request_timer(Duration::from_millis(100));
                 self.flag = false;
+                current.set_window_state(WindowState::Minimized);
                 ctx.set_cursor(&Cursor::Crosshair);
             }
             match event {
@@ -193,6 +195,10 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
                         ctx.window().close();
                     } else if self.t1 == *id {
                         //posso selezionare dopo tot secondi
+                        if data.monitor_id != 0{
+                            println!("jnsjdendk");
+                            data.do_screen();
+                        }
                         data.time_interval = 0.0;
                         current.set_always_on_top(true);
                         current.set_window_state(WindowState::Restored);

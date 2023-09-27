@@ -7,6 +7,7 @@ use druid::{
     Widget, WidgetExt, WidgetPod, WindowDesc, WindowState,
 };
 use im::{Vector, HashMap};
+use winit::monitor::MonitorHandle;
 // use druid_shell::{TimerToken};
 
 use crate::controller::*;
@@ -225,9 +226,9 @@ impl Screenshot {
 
     pub fn action_capture(&mut self, ctx: &mut EventCtx){
         let displays = screenshots::DisplayInfo::all().expect("error");
-        let scale = displays[self.monitor_id].scale_factor as f64;
-        let width = displays[self.monitor_id].width as f64 * scale;
-        let height = displays[self.monitor_id].height as f64 * scale;
+        let scale = displays[0].scale_factor as f64;
+        let width = displays[0].width as f64 * scale;
+        let height = displays[0].height as f64 * scale;
 
         let mut current = ctx.window().clone();
         current.set_window_state(WindowState::Minimized);
@@ -245,11 +246,23 @@ impl Screenshot {
             Container::new(draw_rect()).background(Color::rgba(0.0, 0.0, 0.0, 0.6)),
         );
 
-        let new_win = WindowDesc::new(container)
+        let stack = Either::new(
+            |data: &Screenshot, _: &Env| data.monitor_id == 1,
+            container,
+            {
+                self.do_screen();
+                let img = Image::new(self.img.clone()).fill_mode(FillStrat::ScaleDown);
+                // let sizedbox = SizedBox::new(img).width(800.).height(500.);
+                Flex::column().with_child(ZStack::new(img).border(Color::RED, 2.0).fix_size(width/scale, height/scale).center()).center()
+            }
+        ).center();
+
+        let new_win = WindowDesc::new(stack)
             .show_titlebar(false)
             .transparent(true)
             .window_size((width, height))
             .resizable(false)
+            // .set_window_state(WindowState::Maximized)
             .set_position((0.0, 0.0));
 
         ctx.new_window(new_win);
@@ -478,6 +491,7 @@ pub fn draw_rect() -> impl Widget<Screenshot> {
     let paint = Painter::new(|ctx: &mut PaintCtx<'_, '_, '_>, data: &Screenshot, _env| {
         let (start, end) = (data.area.start, data.area.end);
         let rect = druid::Rect::from_points(start, end);
+
         ctx.fill(
             rect,
             &Color::rgba(
@@ -495,5 +509,6 @@ pub fn draw_rect() -> impl Widget<Screenshot> {
     })
     .center();
 
-    Flex::column().with_child(paint)
+    // Flex::column().with_child(paint)
+    paint
 }

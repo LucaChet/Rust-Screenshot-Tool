@@ -5,7 +5,7 @@ use druid::widget::{
     Painter, Stepper, TextBox, ZStack,
 };
 
-use druid::{
+use druid::{Monitor,
     WindowId, commands, AppDelegate, Color, Command, Data, Env, EventCtx, FileDialogOptions, FileSpec,
     ImageBuf, LocalizedString, Menu, MenuItem, Point, RenderContext, UnitPoint, Widget, WidgetExt,
     WindowDesc, WindowState,

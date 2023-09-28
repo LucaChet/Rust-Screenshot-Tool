@@ -1,6 +1,6 @@
 use druid::{
-    Selector, WindowDesc, KeyEvent, KbKey, commands, AppDelegate, Code, Command, Cursor, DelegateCtx, Env, Event, EventCtx,
-    FileDialogOptions, FileSpec, Handled, LocalizedString, MouseButton, Point, Target, Widget,
+    Selector, WindowDesc, commands, AppDelegate, Code, Command, Cursor, DelegateCtx, Env, Event, EventCtx
+    ,Handled, LocalizedString, MouseButton, Point, Target, Widget,
     WindowState,
 };
 use std::time::Duration;
@@ -120,8 +120,11 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
             // }
             
             if data.time_interval > 0.0 && self.flag {
-                println!("dllm");
-                self.t1 = ctx.request_timer(Duration::from_secs(data.time_interval as u64));
+                if data.monitor_id != 0{
+                    self.t1 = ctx.request_timer(Duration::from_secs((data.time_interval/2.) as u64));
+                }else{
+                    self.t1 = ctx.request_timer(Duration::from_secs(data.time_interval as u64));
+                }
                 self.flag = false;
                 current.set_window_state(WindowState::Minimized);
             } else if self.flag {
@@ -155,6 +158,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
                         data.area.rgba.b = 0.0;
                         data.area.rgba.a = 0.0;
                         data.flag_selection = true;
+                        data.flag_desk2 = false;
                         self.t1 = ctx.request_timer(Duration::from_millis(500));
 
                         ctx.set_active(false);
@@ -192,7 +196,6 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
                 }
                 Event::Timer(id) => {
                     if self.t1 == *id && data.flag_selection {
-                        println!("screenknckedncokwdncklwnm");
                         if data.area.width != 0.0 && data.area.heigth != 0.0 {
                             data.do_screen_area(); //dovrebbe essere do_screen_area -> cambio per prova
                             self.flag = true;
@@ -202,26 +205,18 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
                         ctx.window().close();
                     } else if self.t1 == *id && self.one_time {
                         //posso selezionare dopo tot secondi
-                        // if data.monitor_id != 0 && !data.flag_desk2{
-                        //     println!("km");
-                        //     data.do_screen();
-                        //     // data.flag_desk2 = true;
-                        //     self.t1 = ctx.request_timer(Duration::from_millis(100));
-                        // }
-                        // if data.flag_desk2 == true && data.screen_fatto{
-                            println!("LOLLOBRIGIDASSAR");
-                            data.flag_desk2 = false;
+                        if data.monitor_id != 0 && !data.flag_desk2{
+                            data.action_capture(ctx);
+                            data.flag_desk2 = true;
+                            ctx.window().close();
+                        }else{
                             self.one_time = false;
                             current.set_always_on_top(true);
                             current.set_window_state(WindowState::Restored);
                             ctx.set_cursor(&Cursor::Crosshair);
-                        // }
-                    }
-                    else{
-                        println!("prova CETINO");
+                        }
                     }
                 }
-
                 _ => {}
             }
         } else if data.full_screen {
@@ -238,7 +233,6 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
             match event {
                 Event::Timer(id) => {
                     if self.t1 == *id {
-                        println!("sesso");
                         data.do_screen();
                         self.flag = true;
                         data.screen_window(ctx);
@@ -292,11 +286,11 @@ pub struct ResizeController {
 impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ResizeController {
     fn event(
         &mut self,
-        child: &mut W,
+        _child: &mut W,
         ctx: &mut EventCtx,
         event: &druid::Event,
         data: &mut Screenshot,
-        env: &Env,
+        _env: &Env,
     ) {
         let delta = 3.0;
         match event {
@@ -346,7 +340,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ResizeController {
                     ctx.set_cursor(&Cursor::Arrow);
                 }
             }
-            Event::MouseUp(mouse_event) => {
+            Event::MouseUp(_mouse_event) => {
                 ctx.request_paint();
                 self.selected_part = ResizeInteraction::NoInteraction;
                 ctx.set_active(false);
@@ -490,12 +484,6 @@ impl AppDelegate<Screenshot> for Delegate {
     ) -> Handled {
         
         if let Some(file_info) = cmd.get(commands::SAVE_FILE_AS) {
-            // let img_bytes: &[u8] = data.img.raw_pixels();
-            // if let Err(e) = std::fs::write(file_info.path(), img_bytes) {
-            //     println!("Error writing file: {e}");
-            // }
-            // Specifica il formato dell'immagine (in questo caso PNG)
-            // if let Some(path) = file_info.pa
             let color_type = ColorType::Rgba8;
             let file = std::fs::File::create(file_info.path()).unwrap();
             let encoder = image::codecs::png::PngEncoder::new(file);
@@ -514,7 +502,6 @@ impl AppDelegate<Screenshot> for Delegate {
             match std::fs::read_dir(file_info.path()) {
                 Ok(_) => {
                     data.default_save_path = String::from(file_info.path().to_str().unwrap());
-                    println!("{}", String::from(file_info.path().to_str().unwrap()));
                 }
                 Err(e) => {
                     println!("Error opening path: {e}");

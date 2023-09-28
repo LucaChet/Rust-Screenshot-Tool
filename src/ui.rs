@@ -1,25 +1,21 @@
-use std::fs::File;
 
 use druid::widget::{
-    Button, Container, CrossAxisAlignment, Either, Flex, FlexParams, Image, Label, Padding,
-    Painter, Stepper, TextBox, ZStack,
+    Button, CrossAxisAlignment, Either, Flex, FlexParams, Label, Padding,
+    Stepper, TextBox, ZStack,
 };
 
-use druid::{Monitor,
-    WindowId, commands, AppDelegate, Color, Command, Data, Env, EventCtx, FileDialogOptions, FileSpec,
-    ImageBuf, LocalizedString, Menu, MenuItem, Point, RenderContext, UnitPoint, Widget, WidgetExt,
-    WindowDesc, WindowState,
+use druid::{
+    WindowId, Color, Env, EventCtx, FileDialogOptions, FileSpec,
+    LocalizedString, Menu, MenuItem, UnitPoint, Widget, WidgetExt,
 };
 
-use druid::keyboard_types::Key;
 
-use druid_shell::{HotKey, KbKey, KeyEvent, RawMods, SysMods, Application};
+use druid_shell::{HotKey, SysMods, Application};
 use druid_widget_nursery::{DropdownSelect, WidgetExt as _};
 use image::ImageBuffer;
 
 use crate::controller::*;
 use crate::data::*;
-use crate::data::screenshot_derived_lenses::shortcut;
 
 // use crate::saver::Saver;
 
@@ -28,14 +24,14 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
     let mut col = Flex::column().with_child(
         Flex::row()
             .with_child(Button::new(|data: &Screenshot, _:&Env| format!("📷  (Ctrl+{})", data.shortcut.get(&Shortcut::Screenshot).unwrap().to_uppercase().as_str()))
-            // .tooltip("Screen")
+            .tooltip("Screen")
             .on_click(
                 |ctx, data: &mut Screenshot, _env| {
                     data.action_screen(ctx);
                 },
             ))
             .with_child(Button::new(|data: &Screenshot, _:&Env| format!("🖱️  (Ctrl+{})", data.shortcut.get(&Shortcut::Capture).unwrap().to_uppercase().as_str()))
-            // .tooltip("Capture Area")
+            .tooltip("Capture Area")
             .on_click(
                 |ctx: &mut EventCtx, data: &mut Screenshot, _env| {
                     data.action_capture(ctx);

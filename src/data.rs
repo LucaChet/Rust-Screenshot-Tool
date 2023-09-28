@@ -1,25 +1,20 @@
 use druid::{
     widget::{
-        Button, Container, Controller, Either, FillStrat, Flex, Image, Painter, SizedBox, ZStack, List,
+        Button, Container, Either, FillStrat, Flex, Image, Painter, SizedBox, ZStack, Label,
     },
-    Code, SysMods, HotKey, BoxConstraints, Color, CursorDesc, Data, Env, Event, EventCtx, ImageBuf, LayoutCtx, Lens,
-    LifeCycle, LifeCycleCtx, PaintCtx, Point, Rect, RenderContext, Size, TimerToken, UpdateCtx,
-    Widget, WidgetExt, WidgetPod, WindowDesc, WindowState,
+    Color, Data, Env, EventCtx, ImageBuf, Lens,
+    PaintCtx, Point, RenderContext, TimerToken,
+    Widget, WidgetExt, WindowDesc, WindowState,
 };
-use im::{Vector, HashMap};
-use winit::monitor::MonitorHandle;
-// use druid_shell::{TimerToken};
+use im::HashMap;
+use image::{ImageBuffer, Rgba, DynamicImage};
 
 use crate::controller::*;
 use arboard::Clipboard;
 use arboard::ImageData;
-use image::{codecs::png::PngDecoder, *};
-use raster::{transform, Color as rasterColor, Image as rasterImage};
 use screenshots::Screen;
 use serde::{Deserialize, Serialize};
 use std::{borrow::Cow, hash::Hash};
-
-use self::selected_area_derived_lenses::heigth;
 
 #[derive(Clone, Data, PartialEq, Debug, Serialize, Deserialize)]
 pub enum Format {
@@ -259,12 +254,12 @@ impl Screenshot {
             |data: &Screenshot, _: &Env| data.monitor_id == 0,
             container,
             {
-                // self.do_screen();
+                self.do_screen();
                 let img = Image::new(self.img.clone());
                 let sizedbox = SizedBox::new(Flex::column().with_child(img)).fix_size(width, height);
                 let col = ZStack::new(sizedbox)
                 .with_centered_child(container2);
-                col
+                col            
             }
         ).center();
 
@@ -378,7 +373,7 @@ impl Screenshot {
 }
 
 pub fn show_screen(
-    ctx: &mut EventCtx,
+    _ctx: &mut EventCtx,
     image: ImageBuf,
     data: &mut Screenshot,
 ) -> impl Widget<Screenshot> {
@@ -397,18 +392,23 @@ pub fn show_screen(
     let sizedbox = SizedBox::new(img).width(800.).height(500.);
 
     let resize_button =
-        Button::new("resize").on_click(move |ctx: &mut EventCtx, data: &mut Screenshot, _env| {
+        Button::new("resize").on_click(move |_ctx: &mut EventCtx, data: &mut Screenshot, _env| {
             data.flag_resize = true;
         });
 
-    let annulla_button =
-        Button::new("cancel").on_click(move |ctx: &mut EventCtx, data: &mut Screenshot, _env| {
+    let cancel_button =
+        Button::new("cancel").on_click(move |_ctx: &mut EventCtx, data: &mut Screenshot, _env| {
             data.flag_resize = false;
             data.reset_resize_rect();
         });
 
+    let edit_button =  
+    Button::new("edit").on_click(move |_ctx: &mut EventCtx, data: &mut Screenshot, _env| {
+        
+    });
+
     let copy_button = Button::new("copy to clipboard").on_click(
-        move |ctx: &mut EventCtx, data: &mut Screenshot, _env| {
+        move |_ctx: &mut EventCtx, data: &mut Screenshot, _env| {
             let mut clip = Clipboard::new().unwrap();
             let formatted: ImageData = ImageData {
                 width: data.img.width(),
@@ -416,7 +416,6 @@ pub fn show_screen(
                 bytes: Cow::from(data.img.raw_pixels()),
             };
             clip.set_image(formatted).unwrap();
-            println!("Saved check your clipboard");
         },
     );
 
@@ -453,7 +452,7 @@ pub fn show_screen(
 
     let button1 = Either::new(
         |data: &Screenshot, _: &Env| data.flag_resize,
-        annulla_button,
+        cancel_button,
         copy_button,
     );
 
@@ -463,8 +462,15 @@ pub fn show_screen(
         resize_button,
     );
 
-    row.add_child(button1);
+    let button3 = Either::new(
+        |data: &Screenshot, _: &Env| data.flag_resize,
+        Label::new(""),
+        edit_button,
+    );
+
     row.add_child(button2);
+    row.add_child(button1);
+    row.add_child(button3);
     col.add_child(row);
 
     // row2.add_child(sizedbox);

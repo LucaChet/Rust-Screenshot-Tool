@@ -256,9 +256,7 @@ impl Screenshot {
         let stack = Either::new(
             |data: &Screenshot, _: &Env| data.monitor_id == 0,
             container,
-            {
-                // self.do_screen();
-                
+            {                
                 let img = Image::new(self.img.clone());
                 let sizedbox = SizedBox::new(Flex::column().with_child(img)).fix_size(width, height);
                 let col = ZStack::new(sizedbox)
@@ -515,6 +513,7 @@ pub fn draw_rect() -> impl Widget<Screenshot> {
     .controller(MouseClickDragController {
         t1: TimerToken::next(),
         flag: true,
+        flag_desk2: false,
     })
     .center();
 

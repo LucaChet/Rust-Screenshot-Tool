@@ -100,7 +100,6 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Enter {
 pub struct MouseClickDragController {
     pub t1: TimerToken,
     pub flag: bool,
-    pub flag_desk2: bool,
 }
 
 impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragController {
@@ -115,9 +114,9 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
         if data.full_screen == false {
             let mut current = ctx.window().clone();
 
-            if data.monitor_id != 0{
-                self.flag_desk2 = true;
-            }
+            // if data.monitor_id != 0{
+            //     self.flag_desk2 = true;
+            // }
 
             if data.time_interval > 0.0 && self.flag {
                 self.t1 = ctx.request_timer(Duration::from_secs(data.time_interval as u64));
@@ -203,13 +202,14 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
                         if data.monitor_id != 0{
                             println!("km");
                             data.do_screen();
+                            data.flag_desk2 = true;
                             // self.t1 = ctx.request_timer(Duration::from_millis(100));
-                            self.flag_desk2 = false;
                         }
-                                                  
+                        if data.flag_desk2 == true {
                             current.set_always_on_top(true);
                             current.set_window_state(WindowState::Restored);
                             ctx.set_cursor(&Cursor::Crosshair);
+                        }
                         
                     }
                 }

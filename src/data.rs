@@ -153,6 +153,7 @@ pub struct Screenshot {
     pub editing_shortcut: bool,
     pub duplicate_shortcut: bool,
     pub monitor_id: usize,
+    pub flag_desk2: bool,
 }
 
 impl Screenshot {
@@ -186,6 +187,7 @@ impl Screenshot {
             editing_shortcut: true,
             duplicate_shortcut: false,
             monitor_id: 0,
+            flag_desk2: false,
         }
     }
 
@@ -256,7 +258,9 @@ impl Screenshot {
         let stack = Either::new(
             |data: &Screenshot, _: &Env| data.monitor_id == 0,
             container,
-            {                
+            {
+                // self.do_screen();
+                
                 let img = Image::new(self.img.clone());
                 let sizedbox = SizedBox::new(Flex::column().with_child(img)).fix_size(width, height);
                 let col = ZStack::new(sizedbox)
@@ -513,7 +517,6 @@ pub fn draw_rect() -> impl Widget<Screenshot> {
     .controller(MouseClickDragController {
         t1: TimerToken::next(),
         flag: true,
-        flag_desk2: false,
     })
     .center();
 

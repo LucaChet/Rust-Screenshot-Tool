@@ -260,7 +260,6 @@ impl Screenshot {
             container,
             {
                 // self.do_screen();
-                
                 let img = Image::new(self.img.clone());
                 let sizedbox = SizedBox::new(Flex::column().with_child(img)).fix_size(width, height);
                 let col = ZStack::new(sizedbox)
@@ -299,6 +298,9 @@ impl Screenshot {
             image.clone().width() as usize,
             image.clone().height() as usize,
         );
+        // if self.monitor_id != 0{
+        //     self.flag_desk2 = true;
+        // }
         self.screen_fatto = true;
         self.flag_transparency = false;
     }
@@ -517,6 +519,7 @@ pub fn draw_rect() -> impl Widget<Screenshot> {
     .controller(MouseClickDragController {
         t1: TimerToken::next(),
         flag: true,
+        one_time: true,
     })
     .center();
 

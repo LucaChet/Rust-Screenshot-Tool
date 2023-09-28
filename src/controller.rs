@@ -100,6 +100,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Enter {
 pub struct MouseClickDragController {
     pub t1: TimerToken,
     pub flag: bool,
+    pub one_time: bool,
 }
 
 impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragController {
@@ -115,15 +116,16 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
             let mut current = ctx.window().clone();
 
             // if data.monitor_id != 0{
-            //     self.flag_desk2 = true;
+                //     self.flag_desk2 = true;
             // }
-
+            
             if data.time_interval > 0.0 && self.flag {
+                println!("dllm");
                 self.t1 = ctx.request_timer(Duration::from_secs(data.time_interval as u64));
                 self.flag = false;
                 current.set_window_state(WindowState::Minimized);
             } else if self.flag {
-                self.t1 = ctx.request_timer(Duration::from_millis(100));
+                self.t1 = ctx.request_timer(Duration::from_millis(10));
                 self.flag = false;
                 current.set_window_state(WindowState::Minimized);
                 ctx.set_cursor(&Cursor::Crosshair);
@@ -190,6 +192,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
                 }
                 Event::Timer(id) => {
                     if self.t1 == *id && data.flag_selection {
+                        println!("screenknckedncokwdncklwnm");
                         if data.area.width != 0.0 && data.area.heigth != 0.0 {
                             data.do_screen_area(); //dovrebbe essere do_screen_area -> cambio per prova
                             self.flag = true;
@@ -197,20 +200,25 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
                         data.flag_selection = false;
                         data.screen_window(ctx);
                         ctx.window().close();
-                    } else if self.t1 == *id {
+                    } else if self.t1 == *id && self.one_time {
                         //posso selezionare dopo tot secondi
-                        if data.monitor_id != 0{
-                            println!("km");
-                            data.do_screen();
-                            data.flag_desk2 = true;
-                            // self.t1 = ctx.request_timer(Duration::from_millis(100));
-                        }
-                        if data.flag_desk2 == true {
+                        // if data.monitor_id != 0 && !data.flag_desk2{
+                        //     println!("km");
+                        //     data.do_screen();
+                        //     // data.flag_desk2 = true;
+                        //     self.t1 = ctx.request_timer(Duration::from_millis(100));
+                        // }
+                        // if data.flag_desk2 == true && data.screen_fatto{
+                            println!("LOLLOBRIGIDASSAR");
+                            data.flag_desk2 = false;
+                            self.one_time = false;
                             current.set_always_on_top(true);
                             current.set_window_state(WindowState::Restored);
                             ctx.set_cursor(&Cursor::Crosshair);
-                        }
-                        
+                        // }
+                    }
+                    else{
+                        println!("prova CETINO");
                     }
                 }
 
@@ -230,6 +238,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
             match event {
                 Event::Timer(id) => {
                     if self.t1 == *id {
+                        println!("sesso");
                         data.do_screen();
                         self.flag = true;
                         data.screen_window(ctx);

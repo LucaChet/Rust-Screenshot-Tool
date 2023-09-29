@@ -1,6 +1,6 @@
 use druid::{
     widget::{
-        Button, Container, Either, FillStrat, Flex, Image, Painter, SizedBox, ZStack, Label,
+        Svg, SvgData, Button, Container, Either, FillStrat, Flex, Image, Painter, SizedBox, ZStack, Label,
     },
     Color, Data, Env, EventCtx, ImageBuf, Lens,
     PaintCtx, Point, RenderContext, TimerToken,
@@ -15,6 +15,8 @@ use arboard::ImageData;
 use screenshots::Screen;
 use serde::{Deserialize, Serialize};
 use std::{borrow::Cow, hash::Hash};
+
+use druid_widget_nursery::DropdownSelect;
 
 #[derive(Clone, Data, PartialEq, Debug, Serialize, Deserialize)]
 pub enum Format {
@@ -43,6 +45,24 @@ impl Format {
             Format::Bmp => ".bmp".to_string(),
         }
     }
+}
+
+#[derive(Clone, Data, PartialEq, Debug, Serialize, Deserialize)]
+pub enum EditTool{
+    Pencil,
+    Highlighter,
+    Shape,
+    Text,
+}
+
+#[derive(Clone, Data, PartialEq, Debug, Serialize, Deserialize)]
+pub enum ColorTool{
+    Black, 
+    Red, 
+    Blue,
+    Yellow,
+    Green,
+    White,
 }
 
 #[derive(Clone, Data, PartialEq, Eq, Debug, Serialize, Deserialize, Hash)]
@@ -150,6 +170,8 @@ pub struct Screenshot {
     pub monitor_id: usize,
     pub flag_desk2: bool,
     pub flag_edit: bool,
+    pub edit_tool: EditTool,
+    pub color_tool: ColorTool,
 }
 
 impl Screenshot {
@@ -185,6 +207,8 @@ impl Screenshot {
             monitor_id: 0,
             flag_desk2: false,
             flag_edit: false,
+            edit_tool: EditTool::Pencil,
+            color_tool: ColorTool::Black,
         }
     }
 
@@ -376,14 +400,147 @@ impl Screenshot {
 
 pub fn build_toolbar() -> impl Widget<Screenshot>{
     let mut row = Flex::row();
-    let pencil = Button::new("✏️");
-    let highlighter = Button::new("🟡");
-    let shapes = Button::new("📐"); 
+    let pencil = Either::new(
+        |data, _| data.edit_tool == EditTool::Pencil,
+        Image::new(ImageBuf::from_data(include_bytes!("../target/svg/icons8-pencil-48.png")).unwrap()).fix_size(30., 30.).on_click(
+            |_ctx, data: &mut Screenshot, _: &Env|{
+                data.edit_tool = EditTool::Pencil;
+            }
+        ).border( Color::BLACK, 2.).background(Color::GRAY),
+        Image::new(ImageBuf::from_data(include_bytes!("../target/svg/icons8-pencil-48.png")).unwrap()).fix_size(30., 30.).on_click(
+            |_ctx, data: &mut Screenshot, _: &Env|{
+                data.edit_tool = EditTool::Pencil;
+            }
+        ),
+    );
+
+    let highlighter = Either::new(
+        |data, _| data.edit_tool == EditTool::Highlighter,
+        Image::new(ImageBuf::from_data(include_bytes!("../target/svg/icons8-highlighter-48.png")).unwrap()).fix_size(30., 30.).on_click(
+            |_ctx, data: &mut Screenshot, _: &Env|{
+                data.edit_tool = EditTool::Highlighter;
+            }
+        ).border( Color::BLACK, 2.).background(Color::GRAY),
+        Image::new(ImageBuf::from_data(include_bytes!("../target/svg/icons8-highlighter-48.png")).unwrap()).fix_size(30., 30.).on_click(
+            |_ctx, data: &mut Screenshot, _: &Env|{
+                data.edit_tool = EditTool::Highlighter;
+            }
+        ),
+    );
+
+    let shapes = Either::new(
+        |data, _| data.edit_tool == EditTool::Shape,
+        Image::new(ImageBuf::from_data(include_bytes!("../target/svg/icons8-shape-32.png")).unwrap()).fix_size(30., 30.).on_click(
+            |_ctx, data: &mut Screenshot, _: &Env|{
+                data.edit_tool = EditTool::Shape;
+            }
+        ).border( Color::BLACK, 2.).background(Color::GRAY),
+        Image::new(ImageBuf::from_data(include_bytes!("../target/svg/icons8-shape-32.png")).unwrap()).fix_size(30., 30.).on_click(
+            |_ctx, data: &mut Screenshot, _: &Env|{
+                data.edit_tool = EditTool::Shape;
+            }
+        ),
+    );
+
+    let text = Either::new(
+        |data, _| data.edit_tool == EditTool::Text,
+        Image::new(ImageBuf::from_data(include_bytes!("../target/svg/icons8-text-50.png")).unwrap()).fix_size(30., 30.).on_click(
+            |_ctx, data: &mut Screenshot, _: &Env|{
+                data.edit_tool = EditTool::Text;
+            }
+        ).border( Color::BLACK, 2.).background(Color::GRAY),
+        Image::new(ImageBuf::from_data(include_bytes!("../target/svg/icons8-text-50.png")).unwrap()).fix_size(30., 30.).on_click(
+            |_ctx, data: &mut Screenshot, _: &Env|{
+                data.edit_tool = EditTool::Text;
+            }
+        ),
+    );
+
+    let mut row_color = Flex::row();
+    row_color.add_child(Either::new(
+        |data: &Screenshot, _| data.color_tool == ColorTool::White,
+        Image::new(ImageBuf::from_data(include_bytes!("../target/svg/icons8-white-circle-48.png")).unwrap()).fix_size(30., 30.).on_click(
+            |_ctx, data: &mut Screenshot, _: &Env|{
+                data.color_tool = ColorTool::White;
+            }
+        ).border( Color::BLACK, 2.).background(Color::GRAY),
+        Image::new(ImageBuf::from_data(include_bytes!("../target/svg/icons8-white-circle-48.png")).unwrap()).fix_size(30., 30.)).on_click(
+            |_ctx, data: &mut Screenshot, _: &Env|{
+                data.color_tool = ColorTool::White;
+            }
+        ));
+    row_color.add_child(Either::new(
+        |data: &Screenshot, _| data.color_tool == ColorTool::Black,
+        Image::new(ImageBuf::from_data(include_bytes!("../target/svg/icons8-black-circle-48.png")).unwrap()).fix_size(30., 30.).on_click(
+            |_ctx, data: &mut Screenshot, _: &Env|{
+                data.color_tool = ColorTool::Black;
+            }
+        ).border( Color::BLACK, 2.).background(Color::GRAY),
+        Image::new(ImageBuf::from_data(include_bytes!("../target/svg/icons8-black-circle-48.png")).unwrap()).fix_size(30., 30.)).on_click(
+            |_ctx, data: &mut Screenshot, _: &Env|{
+                data.color_tool = ColorTool::Black;
+            }
+        ));
+    row_color.add_child(Either::new(
+        |data: &Screenshot, _| data.color_tool == ColorTool::Red,
+        Image::new(ImageBuf::from_data(include_bytes!("../target/svg/icons8-red-circle-48.png")).unwrap()).fix_size(30., 30.).on_click(
+            |_ctx, data: &mut Screenshot, _: &Env|{
+                data.color_tool = ColorTool::Red;
+            }
+        ).border( Color::BLACK, 2.).background(Color::GRAY),
+        Image::new(ImageBuf::from_data(include_bytes!("../target/svg/icons8-red-circle-48.png")).unwrap()).fix_size(30., 30.)).on_click(
+            |_ctx, data: &mut Screenshot, _: &Env|{
+                data.color_tool = ColorTool::Red;
+            }
+        ));
+    row_color.add_child(Either::new(
+        |data: &Screenshot, _| data.color_tool == ColorTool::Green,
+        Image::new(ImageBuf::from_data(include_bytes!("../target/svg/icons8-green-circle-48.png")).unwrap()).fix_size(30., 30.).on_click(
+            |_ctx, data: &mut Screenshot, _: &Env|{
+                data.color_tool = ColorTool::Green;
+            }
+        ).border( Color::BLACK, 2.).background(Color::GRAY),
+        Image::new(ImageBuf::from_data(include_bytes!("../target/svg/icons8-green-circle-48.png")).unwrap()).fix_size(30., 30.)).on_click(
+            |_ctx, data: &mut Screenshot, _: &Env|{
+                data.color_tool = ColorTool::Green;
+            }
+        ));
+    row_color.add_child(Either::new(
+        |data: &Screenshot, _| data.color_tool == ColorTool::Yellow,
+        Image::new(ImageBuf::from_data(include_bytes!("../target/svg/icons8-yellow-circle-48.png")).unwrap()).fix_size(30., 30.).on_click(
+            |_ctx, data: &mut Screenshot, _: &Env|{
+                data.color_tool = ColorTool::Yellow;
+            }
+        ).border( Color::BLACK, 2.).background(Color::GRAY),
+        Image::new(ImageBuf::from_data(include_bytes!("../target/svg/icons8-yellow-circle-48.png")).unwrap()).fix_size(30., 30.)).on_click(
+            |_ctx, data: &mut Screenshot, _: &Env|{
+                data.color_tool = ColorTool::Yellow;
+            }
+        ));
+    row_color.add_child(Either::new(
+        |data: &Screenshot, _| data.color_tool == ColorTool::Blue,
+        Image::new(ImageBuf::from_data(include_bytes!("../target/svg/icons8-blue-circle-48.png")).unwrap()).fix_size(30., 30.).on_click(
+            |_ctx, data: &mut Screenshot, _: &Env|{
+                data.color_tool = ColorTool::Blue;
+            }
+        ).border( Color::BLACK, 2.).background(Color::GRAY),
+        Image::new(ImageBuf::from_data(include_bytes!("../target/svg/icons8-blue-circle-48.png")).unwrap()).fix_size(30., 30.)).on_click(
+            |_ctx, data: &mut Screenshot, _: &Env|{
+                data.color_tool = ColorTool::Blue;
+            }
+        ));
 
     row.add_child(pencil);
+    row.add_default_spacer();
     row.add_child(highlighter);
+    row.add_default_spacer();
     row.add_child(shapes);
-    
+    row.add_default_spacer();
+    row.add_child(text);
+    row.add_default_spacer();
+    row.add_default_spacer();
+    row.add_child(row_color.border(Color::GRAY, 2.));
+
     row
 }
 

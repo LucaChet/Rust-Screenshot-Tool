@@ -147,6 +147,7 @@ impl ResizedArea {
     }
 }
 
+
 #[derive(Clone, Data, Lens)]
 pub struct Screenshot {
     pub name: String,
@@ -556,7 +557,7 @@ pub fn show_screen(
     let original_w = data.resized_area.width;
     let original_h = data.resized_area.height;
 
-    let img = Image::new(image.clone()).fill_mode(FillStrat::ScaleDown);
+    let img = Image::new(image.clone()).fill_mode(FillStrat::ScaleDown).controller(Drawer::new());
 
     let mut col = Flex::column();
     let mut row = Flex::row();

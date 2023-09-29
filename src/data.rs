@@ -1,6 +1,6 @@
 use druid::{
     widget::{
-        Svg, SvgData, Button, Container, Either, FillStrat, Flex, Image, Painter, SizedBox, ZStack, Label,
+        Button, Container, Either, FillStrat, Flex, Image, Painter, SizedBox, ZStack, Label,
     },
     Color, Data, Env, EventCtx, ImageBuf, Lens,
     PaintCtx, Point, RenderContext, TimerToken,
@@ -8,6 +8,7 @@ use druid::{
 };
 use im::HashMap;
 use image::{ImageBuffer, Rgba, DynamicImage};
+use kurbo::BezPath;
 
 use crate::controller::*;
 use arboard::Clipboard;
@@ -15,8 +16,6 @@ use arboard::ImageData;
 use screenshots::Screen;
 use serde::{Deserialize, Serialize};
 use std::{borrow::Cow, hash::Hash};
-
-use druid_widget_nursery::DropdownSelect;
 
 #[derive(Clone, Data, PartialEq, Debug, Serialize, Deserialize)]
 pub enum Format {
@@ -147,6 +146,13 @@ impl ResizedArea {
     }
 }
 
+#[derive(Clone, Data, Lens)]
+pub struct Draw{
+    pub points: im::Vector<im::Vector<Point>>,
+    pub flag_up: bool,
+    pub segment: usize,
+}
+
 
 #[derive(Clone, Data, Lens)]
 pub struct Screenshot {
@@ -173,6 +179,7 @@ pub struct Screenshot {
     pub flag_edit: bool,
     pub edit_tool: EditTool,
     pub color_tool: ColorTool,
+    pub draw: Draw,
 }
 
 impl Screenshot {
@@ -185,6 +192,8 @@ impl Screenshot {
         shortcut.insert(Shortcut::Screenshot, String::from("t"));
         shortcut.insert(Shortcut::Capture, String::from("y"));
         shortcut.insert(Shortcut::Quit, String::from("q"));
+        let mut vector = im::Vector::new();
+        vector.push_back(im::Vector::new());
 
         Self {
             name,
@@ -210,6 +219,7 @@ impl Screenshot {
             flag_edit: false,
             edit_tool: EditTool::Pencil,
             color_tool: ColorTool::Black,
+            draw: Draw { points: vector, flag_up: false, segment: 0},
         }
     }
 
@@ -531,6 +541,16 @@ pub fn build_toolbar() -> impl Widget<Screenshot>{
             }
         ));
 
+    let save = Button::new("Save");
+    let cancel = Button::new("Cancel").on_click(
+        |_ctx, data: &mut Screenshot, _env: &Env|{
+            data.flag_edit = false;
+        }
+    );
+
+    row.add_child(save);
+    row.add_default_spacer();
+    row.add_default_spacer();
     row.add_child(pencil);
     row.add_default_spacer();
     row.add_child(highlighter);
@@ -541,6 +561,9 @@ pub fn build_toolbar() -> impl Widget<Screenshot>{
     row.add_default_spacer();
     row.add_default_spacer();
     row.add_child(row_color.border(Color::GRAY, 2.));
+    row.add_default_spacer();
+    row.add_default_spacer();
+    row.add_child(cancel);
 
     row
 }
@@ -557,14 +580,14 @@ pub fn show_screen(
     let original_w = data.resized_area.width;
     let original_h = data.resized_area.height;
 
-    let img = Image::new(image.clone()).fill_mode(FillStrat::ScaleDown).controller(Drawer::new());
+    let img = Image::new(image.clone()).fill_mode(FillStrat::ScaleDown);
 
     let mut col = Flex::column();
     let mut row = Flex::row();
     let row_toolbar = build_toolbar();
 
     let sizedbox = SizedBox::new(img).width(800.).height(500.);
-
+    
     let resize_button =
         Button::new("resize").on_click(move |_ctx: &mut EventCtx, data: &mut Screenshot, _env| {
             data.flag_resize = true;
@@ -657,30 +680,15 @@ pub fn show_screen(
     col.add_child(
         ZStack::new(sizedbox).with_centered_child(Either::new(
             |data: &Screenshot, _: &Env| data.flag_resize,
-            Painter::new(|ctx, data: &Screenshot, _env| {
-                let rect = druid::Rect::from_points(
-                    (data.resized_area.x, data.resized_area.y),
-                    (
-                        data.resized_area.x + data.resized_area.width,
-                        data.resized_area.y + data.resized_area.height,
-                    ),
-                );
-                ctx.fill(rect, &Color::rgba(0.0, 0.0, 0.0, 0.5));
-                ctx.stroke(rect, &druid::Color::RED, 2.0);
-            })
-            .center()
-            .controller(ResizeController {
-                selected_part: ResizeInteraction::NoInteraction,
-                original_area: ResizedArea::new_parameter(
-                    data.resized_area.x,
-                    data.resized_area.y,
-                    data.resized_area.width,
-                    data.resized_area.height,
-                ),
-            }),
-            druid::widget::Label::new(""),
+            draw_resize(data),
+            Either::new(
+                |data: &Screenshot, _: &Env| data.flag_edit,
+                drawing(),
+                druid::widget::Label::new(""),
+            ),
         )),
     );
+
     col
 }
 
@@ -703,6 +711,68 @@ pub fn draw_rect() -> impl Widget<Screenshot> {
     .controller(MouseClickDragController {
         t1: TimerToken::next(),
         flag: true,
+    })
+    .center();
+
+    // Flex::column().with_child(paint)
+    paint
+}
+
+pub fn draw_resize(data: &Screenshot) -> impl Widget<Screenshot>{
+    Painter::new(|ctx, data: &Screenshot, _env| {
+        let rect = druid::Rect::from_points(
+            (data.resized_area.x, data.resized_area.y),
+            (
+                data.resized_area.x + data.resized_area.width,
+                data.resized_area.y + data.resized_area.height,
+            ),
+        );
+        ctx.fill(rect, &Color::rgba(0.0, 0.0, 0.0, 0.5));
+        ctx.stroke(rect, &druid::Color::RED, 2.0);
+    })
+    .center()
+    .controller(ResizeController {
+        selected_part: ResizeInteraction::NoInteraction,
+        original_area: ResizedArea::new_parameter(
+            data.resized_area.x,
+            data.resized_area.y,
+            data.resized_area.width,
+            data.resized_area.height,
+        ),
+    })
+}
+
+pub fn drawing() -> impl Widget<Screenshot>{
+    let paint = Painter::new(|ctx: &mut PaintCtx<'_, '_, '_>, data: &Screenshot, _env| {
+
+        let mut path = BezPath::new();
+        let vec0 = im::Vector::new();
+        let point0 = Point::new(0.0, 0.0);
+        let first_vec = data.draw.points.head().unwrap_or(&vec0);
+        let first_point = first_vec.head().unwrap_or(&point0);
+        path.move_to(first_point.clone());
+
+        for vec in data.draw.points.iter(){
+            for point in vec.iter().skip(1) {
+                path.line_to(point.clone());
+            }
+        }   
+
+        let color = match data.color_tool{
+            ColorTool::Black => Color::BLACK,
+            ColorTool::Red => Color::RED,
+            ColorTool::Blue => Color::BLUE,
+            ColorTool::Yellow => Color::YELLOW,
+            ColorTool::White => Color::WHITE,
+            ColorTool::Green => Color::GREEN,
+        };
+
+        let brush = ctx.solid_brush(color);
+        ctx.stroke(path, &brush, 1.);
+    
+    })
+    .controller(Drawer {
+        flag_drawing: false,
     })
     .center();
 

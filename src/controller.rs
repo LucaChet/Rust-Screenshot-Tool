@@ -626,20 +626,6 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
 
 pub struct Drawer{
     pub flag_drawing: bool,
-    pub draw: EditDrawing,
-}
-
-impl Drawer{
-    pub fn new() -> Self {
-        Self { 
-            flag_drawing: false,
-            draw: EditDrawing { color: Color::RED, points: Vec::new() },
-        }
-    }
-}
-pub struct EditDrawing{
-    color: Color,
-    points: Vec<Point>,
 }
 
 impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
@@ -653,19 +639,20 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
     ) { 
         match event {
             Event::MouseDown(_mouse_event) => {
+                // data.draw.points.push_back(im::Vector::new());
+                // data.draw.flag_up = false;
                 self.flag_drawing = true;
-                println!("can draw now!");
             },
             Event::MouseMove(mouse_event) => {
                 if self.flag_drawing {
-                    self.draw.points.push(mouse_event.pos);
-                    println!("track ");
+                    data.draw.points[data.draw.segment].push_back(mouse_event.pos);
                 }
             },
             Event::MouseUp(_mouse_event) => {
+                // data.draw.flag_up = true;
+                data.draw.points.push_back(im::Vector::new());
+                data.draw.segment += 1;
                 self.flag_drawing = false;
-                println!("pen up now!");
-
             },
             _ => ()
         }

@@ -1,6 +1,6 @@
 use druid::{
     Selector, WindowDesc, commands, AppDelegate, Code, Command, Cursor, DelegateCtx, Env, Event, EventCtx
-    ,Handled, LocalizedString, MouseButton, Point, Target, Widget,
+    ,Handled, LocalizedString, MouseButton, Point, Target, Widget, Color,
     WindowState,
 };
 use std::time::Duration;
@@ -621,5 +621,53 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
         }
 
         child.event(ctx, event, data, _env);
+    }
+}
+
+pub struct Drawer{
+    pub flag_drawing: bool,
+    pub draw: EditDrawing,
+}
+
+impl Drawer{
+    pub fn new() -> Self {
+        Self { 
+            flag_drawing: false,
+            draw: EditDrawing { color: Color::RED, points: Vec::new() },
+        }
+    }
+}
+pub struct EditDrawing{
+    color: Color,
+    points: Vec<Point>,
+}
+
+impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
+    fn event( 
+        &mut self, 
+        child: &mut W, 
+        ctx: &mut EventCtx, 
+        event: &Event, 
+        data: &mut Screenshot, 
+        _env: &Env, 
+    ) { 
+        match event {
+            Event::MouseDown(_mouse_event) => {
+                self.flag_drawing = true;
+                println!("can draw now!");
+            },
+            Event::MouseMove(mouse_event) => {
+                if self.flag_drawing {
+                    self.draw.points.push(mouse_event.pos);
+                    println!("track ");
+                }
+            },
+            Event::MouseUp(_mouse_event) => {
+                self.flag_drawing = false;
+                println!("pen up now!");
+
+            },
+            _ => ()
+        }
     }
 }

@@ -100,7 +100,6 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Enter {
 pub struct MouseClickDragController {
     pub t1: TimerToken,
     pub flag: bool,
-    pub one_time: bool,
 }
 
 impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragController {
@@ -119,12 +118,8 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
                 //     self.flag_desk2 = true;
             // }
             
-            if data.time_interval > 0.0 && self.flag {
-                if data.monitor_id != 0{
-                    self.t1 = ctx.request_timer(Duration::from_secs((data.time_interval/2.) as u64));
-                }else{
-                    self.t1 = ctx.request_timer(Duration::from_secs(data.time_interval as u64));
-                }
+            if data.time_interval > 0.0 && self.flag && !data.flag_desk2{ //flag_desk2 serve per il secondo monitor, scatta dopo tot secondi e al secondo giro entra nell'else if
+                self.t1 = ctx.request_timer(Duration::from_secs(data.time_interval as u64));
                 self.flag = false;
                 current.set_window_state(WindowState::Minimized);
             } else if self.flag {
@@ -203,14 +198,13 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
                         data.flag_selection = false;
                         data.screen_window(ctx);
                         ctx.window().close();
-                    } else if self.t1 == *id && self.one_time {
+                    } else if self.t1 == *id {
                         //posso selezionare dopo tot secondi
                         if data.monitor_id != 0 && !data.flag_desk2{
                             data.action_capture(ctx);
                             data.flag_desk2 = true;
                             ctx.window().close();
                         }else{
-                            self.one_time = false;
                             current.set_always_on_top(true);
                             current.set_window_state(WindowState::Restored);
                             ctx.set_cursor(&Cursor::Crosshair);

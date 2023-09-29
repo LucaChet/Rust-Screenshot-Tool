@@ -24,14 +24,14 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
     let mut col = Flex::column().with_child(
         Flex::row()
             .with_child(Button::new(|data: &Screenshot, _:&Env| format!("📷  (Ctrl+{})", data.shortcut.get(&Shortcut::Screenshot).unwrap().to_uppercase().as_str()))
-            .tooltip("Screen")
+            .stack_tooltip("Screen")
             .on_click(
                 |ctx, data: &mut Screenshot, _env| {
                     data.action_screen(ctx);
                 },
             ))
             .with_child(Button::new(|data: &Screenshot, _:&Env| format!("🖱️  (Ctrl+{})", data.shortcut.get(&Shortcut::Capture).unwrap().to_uppercase().as_str()))
-            .tooltip("Capture Area")
+            .stack_tooltip("Capture Area")
             .on_click(
                 |ctx: &mut EventCtx, data: &mut Screenshot, _env| {
                     data.action_capture(ctx);

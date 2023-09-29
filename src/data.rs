@@ -149,6 +149,7 @@ pub struct Screenshot {
     pub duplicate_shortcut: bool,
     pub monitor_id: usize,
     pub flag_desk2: bool,
+    pub flag_edit: bool,
 }
 
 impl Screenshot {
@@ -183,6 +184,7 @@ impl Screenshot {
             duplicate_shortcut: false,
             monitor_id: 0,
             flag_desk2: false,
+            flag_edit: false,
         }
     }
 
@@ -372,6 +374,19 @@ impl Screenshot {
 
 }
 
+pub fn build_toolbar() -> impl Widget<Screenshot>{
+    let mut row = Flex::row();
+    let pencil = Button::new("✏️");
+    let highlighter = Button::new("🟡");
+    let shapes = Button::new("📐"); 
+
+    row.add_child(pencil);
+    row.add_child(highlighter);
+    row.add_child(shapes);
+    
+    row
+}
+
 pub fn show_screen(
     _ctx: &mut EventCtx,
     image: ImageBuf,
@@ -388,6 +403,7 @@ pub fn show_screen(
 
     let mut col = Flex::column();
     let mut row = Flex::row();
+    let row_toolbar = build_toolbar();
 
     let sizedbox = SizedBox::new(img).width(800.).height(500.);
 
@@ -404,7 +420,7 @@ pub fn show_screen(
 
     let edit_button =  
     Button::new("edit").on_click(move |_ctx: &mut EventCtx, data: &mut Screenshot, _env| {
-        
+        data.flag_edit = true;
     });
 
     let copy_button = Button::new("copy to clipboard").on_click(
@@ -471,7 +487,11 @@ pub fn show_screen(
     row.add_child(button2);
     row.add_child(button1);
     row.add_child(button3);
-    col.add_child(row);
+    col.add_child(Either::new(
+        |data: &Screenshot, _: &Env| data.flag_edit,
+        row_toolbar,
+        row,
+    ));
 
     // row2.add_child(sizedbox);
     col.add_default_spacer();
@@ -525,7 +545,6 @@ pub fn draw_rect() -> impl Widget<Screenshot> {
     .controller(MouseClickDragController {
         t1: TimerToken::next(),
         flag: true,
-        one_time: true,
     })
     .center();
 

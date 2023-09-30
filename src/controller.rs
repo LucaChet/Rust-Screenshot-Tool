@@ -3,6 +3,7 @@ use druid::{
     ,Handled, LocalizedString, MouseButton, Point, Target, Widget, Color,
     WindowState,
 };
+use kurbo::BezPath;
 use std::time::Duration;
 
 use druid::widget::Controller;
@@ -639,22 +640,49 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
     ) { 
         match event {
             Event::MouseDown(_mouse_event) => {
-                // data.draw.points.push_back(im::Vector::new());
-                // data.draw.flag_up = false;
+                ctx.set_active(true);
+                let color = match data.color_tool{
+                    ColorTool::Black => Color::BLACK,
+                    ColorTool::Red => Color::RED,
+                    ColorTool::Blue => Color::BLUE,
+                    ColorTool::Yellow => Color::YELLOW,
+                    ColorTool::White => Color::WHITE,
+                    ColorTool::Green => Color::GREEN,
+                };
+                if data.edit_tool == EditTool::Highlighter {
+                    data.draw.points[data.draw.segment].3 = 0.5;
+                }
+                else {
+                    data.draw.points[data.draw.segment].3 = 1.;
+                }
+                data.draw.points[data.draw.segment].1 = color;
+                data.draw.points[data.draw.segment].2 = data.line_thickness;
                 self.flag_drawing = true;
             },
             Event::MouseMove(mouse_event) => {
-                if self.flag_drawing {
-                    data.draw.points[data.draw.segment].push_back(mouse_event.pos);
+                if self.flag_drawing && is_in_image(mouse_event.pos, data) && ctx.is_active() {
+                    data.draw.points[data.draw.segment].0.push_back(mouse_event.pos);
                 }
             },
             Event::MouseUp(_mouse_event) => {
-                // data.draw.flag_up = true;
-                data.draw.points.push_back(im::Vector::new());
+                ctx.set_active(false);
+                if data.edit_tool == EditTool::Highlighter {
+                    data.draw.points.push_back((im::Vector::new(), Color::WHITE, 1., 0.5));
+                }
+                else {
+                    data.draw.points.push_back((im::Vector::new(), Color::WHITE, 1., 1.));
+                }
                 data.draw.segment += 1;
                 self.flag_drawing = false;
             },
             _ => ()
         }
     }
+}
+
+fn is_in_image(point: Point, data: &Screenshot) -> bool{
+    point.x >= data.resized_area.x && 
+    point.y >= data.resized_area.y && 
+    point.x <= data.resized_area.x + data.resized_area.width && 
+    point.y <= data.resized_area.y + data.resized_area.height  
 }

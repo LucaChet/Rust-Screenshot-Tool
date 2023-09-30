@@ -1,6 +1,6 @@
 use druid::{
     widget::{
-        Button, Container, Either, FillStrat, Flex, Image, Painter, SizedBox, ZStack, Label,
+        Stepper, Button, Container, Either, FillStrat, Flex, Image, Painter, SizedBox, ZStack, Label,
     },
     Color, Data, Env, EventCtx, ImageBuf, Lens,
     PaintCtx, Point, RenderContext, TimerToken,
@@ -9,6 +9,7 @@ use druid::{
 use im::HashMap;
 use image::{ImageBuffer, Rgba, DynamicImage};
 use kurbo::BezPath;
+use piet::StrokeStyle;
 
 use crate::controller::*;
 use arboard::Clipboard;
@@ -148,8 +149,7 @@ impl ResizedArea {
 
 #[derive(Clone, Data, Lens)]
 pub struct Draw{
-    pub points: im::Vector<im::Vector<Point>>,
-    pub flag_up: bool,
+    pub points: im::Vector<(im::Vector<Point>, Color, f64, f64)>,  //(punti, colore della traccia, spessore linea, alpha)
     pub segment: usize,
 }
 
@@ -180,6 +180,7 @@ pub struct Screenshot {
     pub edit_tool: EditTool,
     pub color_tool: ColorTool,
     pub draw: Draw,
+    pub line_thickness: f64,
 }
 
 impl Screenshot {
@@ -192,8 +193,9 @@ impl Screenshot {
         shortcut.insert(Shortcut::Screenshot, String::from("t"));
         shortcut.insert(Shortcut::Capture, String::from("y"));
         shortcut.insert(Shortcut::Quit, String::from("q"));
-        let mut vector = im::Vector::new();
-        vector.push_back(im::Vector::new());
+
+        let mut points = im::Vector::new();
+        points.push_back((im::Vector::new(), Color::WHITE, 1., 1.));
 
         Self {
             name,
@@ -219,7 +221,8 @@ impl Screenshot {
             flag_edit: false,
             edit_tool: EditTool::Pencil,
             color_tool: ColorTool::Black,
-            draw: Draw { points: vector, flag_up: false, segment: 0},
+            draw: Draw { points, segment: 0},
+            line_thickness: 1.,
         }
     }
 
@@ -545,8 +548,25 @@ pub fn build_toolbar() -> impl Widget<Screenshot>{
     let cancel = Button::new("Cancel").on_click(
         |_ctx, data: &mut Screenshot, _env: &Env|{
             data.flag_edit = false;
+            data.draw.points.clear();
+            data.draw.points.push_back((im::Vector::new(), Color::WHITE, 1., 1.));
+            data.draw.segment = 0;
         }
     );
+
+    let pt_box = Stepper::new()
+        .with_range(0.0, 100.0)
+        .with_step(1.0)
+        .lens(Screenshot::line_thickness);
+
+    let label = Label::new(|data: &Screenshot, _: &Env| {
+        format!("Line thickness: {} pt", data.line_thickness)
+    });
+
+    row_color.add_default_spacer();
+    row_color.add_child(label);
+    row_color.add_spacer(1.);
+    row_color.add_child(pt_box);
 
     row.add_child(save);
     row.add_default_spacer();
@@ -573,6 +593,10 @@ pub fn show_screen(
     image: ImageBuf,
     data: &mut Screenshot,
 ) -> impl Widget<Screenshot> {
+    data.flag_edit = false;
+    data.draw.points.clear();
+    data.draw.points.push_back((im::Vector::new(), Color::WHITE, 1., 1.));
+    data.draw.segment = 0;
     data.flag_resize = false;
     data.reset_resize_rect();
     let original_x = data.resized_area.x;
@@ -745,19 +769,6 @@ pub fn draw_resize(data: &Screenshot) -> impl Widget<Screenshot>{
 pub fn drawing() -> impl Widget<Screenshot>{
     let paint = Painter::new(|ctx: &mut PaintCtx<'_, '_, '_>, data: &Screenshot, _env| {
 
-        let mut path = BezPath::new();
-        let vec0 = im::Vector::new();
-        let point0 = Point::new(0.0, 0.0);
-        let first_vec = data.draw.points.head().unwrap_or(&vec0);
-        let first_point = first_vec.head().unwrap_or(&point0);
-        path.move_to(first_point.clone());
-
-        for vec in data.draw.points.iter(){
-            for point in vec.iter().skip(1) {
-                path.line_to(point.clone());
-            }
-        }   
-
         let color = match data.color_tool{
             ColorTool::Black => Color::BLACK,
             ColorTool::Red => Color::RED,
@@ -767,8 +778,25 @@ pub fn drawing() -> impl Widget<Screenshot>{
             ColorTool::Green => Color::GREEN,
         };
 
-        let brush = ctx.solid_brush(color);
-        ctx.stroke(path, &brush, 1.);
+        let point0 = Point::new(0.0, 0.0);
+        let mut path = BezPath::new();
+        
+        path.move_to(data.draw.points[data.draw.segment].0.head().unwrap_or(&point0).clone());
+        for point in data.draw.points[data.draw.segment].0.iter().skip(1) {
+            path.line_to(point.clone());
+        }
+        let brush = ctx.solid_brush(color.with_alpha(data.draw.points[data.draw.segment].3));
+        ctx.stroke(path, &brush, data.line_thickness);
+
+        for i in 0..data.draw.segment{
+            let mut path = BezPath::new();
+            path.move_to(data.draw.points[i].0.head().unwrap_or(&point0).clone());
+            for point in data.draw.points[i].0.iter().skip(1) {
+                path.line_to(point.clone());
+            }
+            let brush = ctx.solid_brush(data.draw.points[i].1.with_alpha(data.draw.points[i].3));
+            ctx.stroke(path, &brush, data.draw.points[i].2);
+        }
     
     })
     .controller(Drawer {

@@ -1,15 +1,15 @@
 use druid::{
     widget::{
-        Stepper, Button, Container, Either, FillStrat, Flex, Image, Painter, SizedBox, ZStack, Label,
+        Stepper, Button, Container, Either, FillStrat, Flex, Image, Painter, SizedBox, ZStack, Label, TextBox,
     },
-    Color, Data, Env, EventCtx, ImageBuf, Lens,
+    FontDescriptor, FontFamily, Color, Data, Env, EventCtx, ImageBuf, Lens,
     PaintCtx, Point, RenderContext, TimerToken,
     Widget, WidgetExt, WindowDesc, WindowState,
 };
 use im::HashMap;
 use image::{ImageBuffer, Rgba, DynamicImage};
-use kurbo::BezPath;
-use piet::StrokeStyle;
+use kurbo::{Shape, BezPath};
+use piet_common::{D2DTextLayout, Text, TextLayoutBuilder};
 
 use crate::controller::*;
 use arboard::Clipboard;
@@ -47,6 +47,13 @@ impl Format {
     }
 }
 
+#[derive(Clone, Data, PartialEq, Debug)]
+pub enum ShapeTool{
+    Arrow,
+    Circle,
+    Square,
+}
+
 #[derive(Clone, Data, PartialEq, Debug, Serialize, Deserialize)]
 pub enum EditTool{
     Pencil,
@@ -57,8 +64,8 @@ pub enum EditTool{
 
 #[derive(Clone, Data, PartialEq, Debug, Serialize, Deserialize)]
 pub enum ColorTool{
-    Black, 
-    Red, 
+    Black,
+    Red,
     Blue,
     Yellow,
     Green,
@@ -153,6 +160,25 @@ pub struct Draw{
     pub segment: usize,
 }
 
+#[derive(Clone, Data, Lens)]
+pub struct Write{
+    pub text: String,
+    pub position: Point,
+    pub color: Color,
+    pub thickness: f64,
+    pub dimensions: (f64, f64),
+}
+impl Write{
+    pub fn new()->Self{
+        Self { text: String::from(""), position: Point { x: 0., y: 0. }, color: Color::WHITE, thickness: 5., dimensions: ( 0., 0. ) }
+    }
+}
+
+#[derive(Clone, Data, Lens)]
+pub struct Arrow{
+    pub start: f64,
+    pub end: f64,
+}
 
 #[derive(Clone, Data, Lens)]
 pub struct Screenshot {
@@ -179,7 +205,12 @@ pub struct Screenshot {
     pub flag_edit: bool,
     pub edit_tool: EditTool,
     pub color_tool: ColorTool,
+    pub shape_tool: ShapeTool,
     pub draw: Draw,
+    pub write: (im::Vector<Write>, usize),
+    pub arrows: im::Vector<Arrow>,
+    pub text: String,
+    pub editing_text: i32,
     pub line_thickness: f64,
 }
 
@@ -196,6 +227,9 @@ impl Screenshot {
 
         let mut points = im::Vector::new();
         points.push_back((im::Vector::new(), Color::WHITE, 1., 1.));
+
+        let mut text: im::Vector<Write> = im::Vector::new();
+        text.push_back(Write::new());
 
         Self {
             name,
@@ -220,9 +254,14 @@ impl Screenshot {
             flag_desk2: false,
             flag_edit: false,
             edit_tool: EditTool::Pencil,
-            color_tool: ColorTool::Black,
+            color_tool: ColorTool::White,
+            shape_tool: ShapeTool::Arrow,
             draw: Draw { points, segment: 0},
-            line_thickness: 1.,
+            write: (text, 0),
+            text: String::from(""),
+            arrows: im::Vector::new(),
+            editing_text: -1,
+            line_thickness: 3.,
         }
     }
 
@@ -299,7 +338,7 @@ impl Screenshot {
                 let sizedbox = SizedBox::new(Flex::column().with_child(img)).fix_size(width, height);
                 let col = ZStack::new(sizedbox)
                 .with_centered_child(container2);
-                col            
+                col
             }
         ).center();
 
@@ -419,11 +458,13 @@ pub fn build_toolbar() -> impl Widget<Screenshot>{
         Image::new(ImageBuf::from_data(include_bytes!("../target/svg/icons8-pencil-48.png")).unwrap()).fix_size(30., 30.).on_click(
             |_ctx, data: &mut Screenshot, _: &Env|{
                 data.edit_tool = EditTool::Pencil;
+                data.line_thickness = 3.;
             }
         ).border( Color::BLACK, 2.).background(Color::GRAY),
         Image::new(ImageBuf::from_data(include_bytes!("../target/svg/icons8-pencil-48.png")).unwrap()).fix_size(30., 30.).on_click(
             |_ctx, data: &mut Screenshot, _: &Env|{
                 data.edit_tool = EditTool::Pencil;
+                data.line_thickness = 3.;
             }
         ),
     );
@@ -433,11 +474,13 @@ pub fn build_toolbar() -> impl Widget<Screenshot>{
         Image::new(ImageBuf::from_data(include_bytes!("../target/svg/icons8-highlighter-48.png")).unwrap()).fix_size(30., 30.).on_click(
             |_ctx, data: &mut Screenshot, _: &Env|{
                 data.edit_tool = EditTool::Highlighter;
+                data.line_thickness = 10.;
             }
         ).border( Color::BLACK, 2.).background(Color::GRAY),
         Image::new(ImageBuf::from_data(include_bytes!("../target/svg/icons8-highlighter-48.png")).unwrap()).fix_size(30., 30.).on_click(
             |_ctx, data: &mut Screenshot, _: &Env|{
                 data.edit_tool = EditTool::Highlighter;
+                data.line_thickness = 10.;
             }
         ),
     );
@@ -461,11 +504,13 @@ pub fn build_toolbar() -> impl Widget<Screenshot>{
         Image::new(ImageBuf::from_data(include_bytes!("../target/svg/icons8-text-50.png")).unwrap()).fix_size(30., 30.).on_click(
             |_ctx, data: &mut Screenshot, _: &Env|{
                 data.edit_tool = EditTool::Text;
+                data.line_thickness = 20.;
             }
         ).border( Color::BLACK, 2.).background(Color::GRAY),
         Image::new(ImageBuf::from_data(include_bytes!("../target/svg/icons8-text-50.png")).unwrap()).fix_size(30., 30.).on_click(
             |_ctx, data: &mut Screenshot, _: &Env|{
                 data.edit_tool = EditTool::Text;
+                data.line_thickness = 20.;
             }
         ),
     );
@@ -551,6 +596,10 @@ pub fn build_toolbar() -> impl Widget<Screenshot>{
             data.draw.points.clear();
             data.draw.points.push_back((im::Vector::new(), Color::WHITE, 1., 1.));
             data.draw.segment = 0;
+
+            data.write.0.clear();
+            data.write.0.push_back(Write::new());
+            data.write.1 = 0;
         }
     );
 
@@ -562,6 +611,137 @@ pub fn build_toolbar() -> impl Widget<Screenshot>{
     let label = Label::new(|data: &Screenshot, _: &Env| {
         format!("Line thickness: {} pt", data.line_thickness)
     });
+
+    let mut row_text = Flex::row();
+    let textbox = Either::new(
+        |data: &Screenshot, _| data.edit_tool == EditTool::Text,
+        TextBox::multiline()
+        .with_placeholder("Insert text")
+        .lens(Screenshot::text)
+        .border(Color::BLACK, 2.),
+        Label::new("")
+    );
+
+    let tick = Either::new(
+        |data: &Screenshot, _| data.edit_tool == EditTool::Text && data.editing_text == -1,
+        Image::new(ImageBuf::from_data(include_bytes!("../target/svg/tick-svgrepo-com.png")).unwrap()).fix_size(30., 30.)
+        .on_click(
+            |_ctx, data: &mut Screenshot, _env|{
+                let color = match data.color_tool{
+                    ColorTool::Black => Color::BLACK,
+                    ColorTool::Red => Color::RED,
+                    ColorTool::Blue => Color::BLUE,
+                    ColorTool::Yellow => Color::YELLOW,
+                    ColorTool::White => Color::WHITE,
+                    ColorTool::Green => Color::GREEN,
+                };
+                data.write.0[data.write.1].color = color;
+                data.write.0[data.write.1].thickness = data.line_thickness;
+                // data.write.0[data.write.1].position = mouse_event.pos;
+                data.write.0[data.write.1].position = Point::new(data.resized_area.x + data.resized_area.width/2., data.resized_area.y + data.resized_area.height/2. );
+                data.write.0[data.write.1].text = data.text.clone();
+                assign_dimensions_to_textbox(data, data.write.1);
+                //SVUOTA
+                data.write.0.push_back(Write::new());
+                data.text = "".to_string();
+                data.write.1 += 1;
+            }
+        ),
+        Label::new("")
+    );
+
+    let edit = Either::new(
+        |data: &Screenshot, _| data.edit_tool == EditTool::Text && data.editing_text != -1,
+        Image::new(ImageBuf::from_data(include_bytes!("../target/svg/save-svgrepo-com.png")).unwrap()).fix_size(30., 30.)
+        .on_click(
+            |_ctx, data: &mut Screenshot, _env|{
+                let color = match data.color_tool{
+                    ColorTool::Black => Color::BLACK,
+                    ColorTool::Red => Color::RED,
+                    ColorTool::Blue => Color::BLUE,
+                    ColorTool::Yellow => Color::YELLOW,
+                    ColorTool::White => Color::WHITE,
+                    ColorTool::Green => Color::GREEN,
+                };
+                data.write.0[data.editing_text as usize].text = data.text.clone();
+                data.write.0[data.editing_text as usize].color = color;
+                data.write.0[data.editing_text as usize].thickness = data.line_thickness;
+
+                assign_dimensions_to_textbox(data, data.editing_text as usize);
+                data.editing_text = -1;
+                data.text = "".to_string();
+            }
+        ),
+        Label::new("")
+    );
+
+    let delete = Either::new(
+        |data: &Screenshot, _| data.edit_tool == EditTool::Text && data.editing_text != -1,
+        Image::new(ImageBuf::from_data(include_bytes!("../target/svg/delete-svgrepo-com.png")).unwrap()).fix_size(30., 30.)
+        .on_click(
+            |_ctx, data: &mut Screenshot, _env|{
+               data.write.0.remove(data.editing_text as usize);
+               data.write.1 -= 1;
+               data.editing_text = -1;
+               data.text = "".to_string();
+            }
+        ),
+        Label::new("")
+    );
+
+    let mut shape_selector = Flex::row();
+    shape_selector.add_child(Either::new(
+        |data: &Screenshot, _| data.shape_tool == ShapeTool::Arrow,
+        Image::new(ImageBuf::from_data(include_bytes!("../target/svg/arrow.png")).unwrap()).fix_size(30., 30.).on_click(
+            |_ctx, data: &mut Screenshot, _: &Env|{
+                data.shape_tool = ShapeTool::Arrow;
+            }
+        ).border( Color::BLACK, 2.).background(Color::GRAY),
+        Image::new(ImageBuf::from_data(include_bytes!("../target/svg/arrow.png")).unwrap()).fix_size(30., 30.)).on_click(
+            |_ctx, data: &mut Screenshot, _: &Env|{
+                data.shape_tool = ShapeTool::Arrow;
+            }
+        ));
+    shape_selector.add_default_spacer();
+    shape_selector.add_child(Either::new(
+        |data: &Screenshot, _| data.shape_tool == ShapeTool::Circle,
+        Image::new(ImageBuf::from_data(include_bytes!("../target/svg/circle.png")).unwrap()).fix_size(30., 30.).on_click(
+            |_ctx, data: &mut Screenshot, _: &Env|{
+                data.shape_tool = ShapeTool::Circle;
+            }
+        ).border( Color::BLACK, 2.).background(Color::GRAY),
+        Image::new(ImageBuf::from_data(include_bytes!("../target/svg/circle.png")).unwrap()).fix_size(30., 30.)).on_click(
+            |_ctx, data: &mut Screenshot, _: &Env|{
+                data.shape_tool = ShapeTool::Circle;
+            }
+        ));
+    shape_selector.add_default_spacer();
+    shape_selector.add_child(Either::new(
+        |data: &Screenshot, _| data.shape_tool == ShapeTool::Square,
+        Image::new(ImageBuf::from_data(include_bytes!("../target/svg/square.png")).unwrap()).fix_size(30., 30.).on_click(
+            |_ctx, data: &mut Screenshot, _: &Env|{
+                data.shape_tool = ShapeTool::Square;
+            }
+        ).border( Color::BLACK, 2.).background(Color::GRAY),
+        Image::new(ImageBuf::from_data(include_bytes!("../target/svg/square.png")).unwrap()).fix_size(30., 30.)).on_click(
+            |_ctx, data: &mut Screenshot, _: &Env|{
+                data.shape_tool = ShapeTool::Square;
+            }
+        ));
+    
+    let row_shape = Either::new(
+        |data: &Screenshot, _| data.edit_tool == EditTool::Shape,
+        shape_selector.border(Color::GRAY, 2.),
+        Label::new("")
+    );
+
+
+    row_text.add_child(textbox);
+    row_text.add_default_spacer();
+    row_text.add_child(tick);
+    row_text.add_child(edit);
+    row_text.add_default_spacer();
+    row_text.add_child(delete);
 
     row_color.add_default_spacer();
     row_color.add_child(label);
@@ -585,7 +765,13 @@ pub fn build_toolbar() -> impl Widget<Screenshot>{
     row.add_default_spacer();
     row.add_child(cancel);
 
-    row
+    let mut col = Flex::column();
+    col.add_child(row);
+    col.add_spacer(5.);
+    col.add_child(row_text);
+    col.add_child(row_shape);
+
+    col
 }
 
 pub fn show_screen(
@@ -611,7 +797,7 @@ pub fn show_screen(
     let row_toolbar = build_toolbar();
 
     let sizedbox = SizedBox::new(img).width(800.).height(500.);
-    
+
     let resize_button =
         Button::new("resize").on_click(move |_ctx: &mut EventCtx, data: &mut Screenshot, _env| {
             data.flag_resize = true;
@@ -623,7 +809,7 @@ pub fn show_screen(
             data.reset_resize_rect();
         });
 
-    let edit_button =  
+    let edit_button =
     Button::new("edit").on_click(move |_ctx: &mut EventCtx, data: &mut Screenshot, _env| {
         data.flag_edit = true;
     });
@@ -707,7 +893,7 @@ pub fn show_screen(
             draw_resize(data),
             Either::new(
                 |data: &Screenshot, _: &Env| data.flag_edit,
-                drawing(),
+                manage_edit(data),
                 druid::widget::Label::new(""),
             ),
         )),
@@ -766,44 +952,92 @@ pub fn draw_resize(data: &Screenshot) -> impl Widget<Screenshot>{
     })
 }
 
-pub fn drawing() -> impl Widget<Screenshot>{
-    let paint = Painter::new(|ctx: &mut PaintCtx<'_, '_, '_>, data: &Screenshot, _env| {
+pub fn manage_edit(_data: &Screenshot) -> impl Widget<Screenshot>{
+    let paint = Painter::new(|ctx: &mut PaintCtx<'_, '_, '_>, data: &Screenshot, env| {
+        // if data.edit_tool == EditTool::Pencil || data.edit_tool == EditTool::Highlighter{
+            //GESTIONE DRAW
+            let color = match data.color_tool{
+                ColorTool::Black => Color::BLACK,
+                ColorTool::Red => Color::RED,
+                ColorTool::Blue => Color::BLUE,
+                ColorTool::Yellow => Color::YELLOW,
+                ColorTool::White => Color::WHITE,
+                ColorTool::Green => Color::GREEN,
+            };
 
-        let color = match data.color_tool{
-            ColorTool::Black => Color::BLACK,
-            ColorTool::Red => Color::RED,
-            ColorTool::Blue => Color::BLUE,
-            ColorTool::Yellow => Color::YELLOW,
-            ColorTool::White => Color::WHITE,
-            ColorTool::Green => Color::GREEN,
-        };
-
-        let point0 = Point::new(0.0, 0.0);
-        let mut path = BezPath::new();
-        
-        path.move_to(data.draw.points[data.draw.segment].0.head().unwrap_or(&point0).clone());
-        for point in data.draw.points[data.draw.segment].0.iter().skip(1) {
-            path.line_to(point.clone());
-        }
-        let brush = ctx.solid_brush(color.with_alpha(data.draw.points[data.draw.segment].3));
-        ctx.stroke(path, &brush, data.line_thickness);
-
-        for i in 0..data.draw.segment{
+            let point0 = Point::new(0.0, 0.0);
             let mut path = BezPath::new();
-            path.move_to(data.draw.points[i].0.head().unwrap_or(&point0).clone());
-            for point in data.draw.points[i].0.iter().skip(1) {
+
+            path.move_to(data.draw.points[data.draw.segment].0.head().unwrap_or(&point0).clone());
+            for point in data.draw.points[data.draw.segment].0.iter().skip(1) {
                 path.line_to(point.clone());
             }
-            let brush = ctx.solid_brush(data.draw.points[i].1.with_alpha(data.draw.points[i].3));
-            ctx.stroke(path, &brush, data.draw.points[i].2);
-        }
-    
+            let brush = ctx.solid_brush(color.with_alpha(data.draw.points[data.draw.segment].3));
+            ctx.stroke(path, &brush, data.line_thickness);
+
+            for i in 0..data.draw.segment{
+                let mut path = BezPath::new();
+                path.move_to(data.draw.points[i].0.head().unwrap_or(&point0).clone());
+                for point in data.draw.points[i].0.iter().skip(1) {
+                    path.line_to(point.clone());
+                }
+                let brush = ctx.solid_brush(data.draw.points[i].1.with_alpha(data.draw.points[i].3));
+                ctx.stroke(path, &brush, data.draw.points[i].2);
+            }
+
+            //GESTIONE WRITE
+            let text = data.write.0[data.write.1].text.clone();
+            let text_layout = ctx.text().new_text_layout(text.clone())
+                .font(FontFamily::MONOSPACE, data.write.0[data.write.1].thickness)
+                .text_color(data.write.0[data.write.1].color)
+                .build()
+                .unwrap();
+        
+            ctx.draw_text(&text_layout, data.write.0[data.write.1].position);
+            if data.editing_text != -1 && data.text != "" {
+                let start = data.write.0[data.editing_text as usize].position;
+                let txt_w =  data.write.0[data.editing_text as usize].dimensions.0;
+                let txt_h =  data.write.0[data.editing_text as usize].dimensions.1;
+                let end = Point::new(data.write.0[data.editing_text as usize].position.x + txt_w, data.write.0[data.editing_text as usize].position.y + txt_h);
+                ctx.stroke(druid::Rect::from_points(start, end), &data.write.0[data.editing_text as usize].color, 2.);
+            }
+
+            for write in data.write.0.clone(){
+                // let color = data.write.0[data.write.1].color;
+                let text_layout = ctx.text().new_text_layout(write.text)
+                .font(FontFamily::MONOSPACE, write.thickness)
+                .text_color(write.color)
+                .build()
+                .unwrap();
+                ctx.draw_text(&text_layout, write.position);
+            }
+
+            //GESTIONE SHAPE
+            // Shape::
+
     })
     .controller(Drawer {
         flag_drawing: false,
+        flag_writing: false,
+        first_click_pos: Point::new(0., 0.),
     })
     .center();
 
-    // Flex::column().with_child(paint)
     paint
+}
+
+fn assign_dimensions_to_textbox(data: &mut Screenshot, index: usize) {
+    let str = data.text.clone();
+    let mut numlines = 0.; 
+    let mut longest = 0;
+    for line in str.split_terminator('\n'){
+        numlines+=1.;
+        if line.len() > longest {
+            longest = line.len()
+        }
+    }
+    
+    //assign dimensions to the virtual text box to be lately clickable
+    data.write.0[index].dimensions = (data.write.0[index].thickness * longest as f64 * 0.555, data.write.0[index].thickness * numlines * 1.35);
+
 }

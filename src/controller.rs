@@ -9,6 +9,7 @@ use std::time::Duration;
 use druid::widget::Controller;
 use druid_shell::TimerToken;
 
+// use crate::data::write_derived_lenses::text;
 use crate::ui::*;
 use crate::data::*;
 use image::*;
@@ -114,10 +115,6 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
     ) {
         if data.full_screen == false {
             let mut current = ctx.window().clone();
-
-            // if data.monitor_id != 0{
-                //     self.flag_desk2 = true;
-            // }
             
             if data.time_interval > 0.0 && self.flag && !data.flag_desk2{ //flag_desk2 serve per il secondo monitor, scatta dopo tot secondi e al secondo giro entra nell'else if
                 self.t1 = ctx.request_timer(Duration::from_secs(data.time_interval as u64));
@@ -627,6 +624,8 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
 
 pub struct Drawer{
     pub flag_drawing: bool,
+    pub flag_writing: bool,
+    pub first_click_pos: Point,
 }
 
 impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
@@ -638,46 +637,123 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
         data: &mut Screenshot, 
         _env: &Env, 
     ) { 
-        match event {
-            Event::MouseDown(_mouse_event) => {
-                ctx.set_active(true);
-                let color = match data.color_tool{
-                    ColorTool::Black => Color::BLACK,
-                    ColorTool::Red => Color::RED,
-                    ColorTool::Blue => Color::BLUE,
-                    ColorTool::Yellow => Color::YELLOW,
-                    ColorTool::White => Color::WHITE,
-                    ColorTool::Green => Color::GREEN,
-                };
-                if data.edit_tool == EditTool::Highlighter {
-                    data.draw.points[data.draw.segment].3 = 0.5;
-                }
-                else {
-                    data.draw.points[data.draw.segment].3 = 1.;
-                }
-                data.draw.points[data.draw.segment].1 = color;
-                data.draw.points[data.draw.segment].2 = data.line_thickness;
-                self.flag_drawing = true;
-            },
-            Event::MouseMove(mouse_event) => {
-                if self.flag_drawing && is_in_image(mouse_event.pos, data) && ctx.is_active() {
-                    data.draw.points[data.draw.segment].0.push_back(mouse_event.pos);
-                }
-            },
-            Event::MouseUp(_mouse_event) => {
-                ctx.set_active(false);
-                if data.edit_tool == EditTool::Highlighter {
-                    data.draw.points.push_back((im::Vector::new(), Color::WHITE, 1., 0.5));
-                }
-                else {
-                    data.draw.points.push_back((im::Vector::new(), Color::WHITE, 1., 1.));
-                }
-                data.draw.segment += 1;
-                self.flag_drawing = false;
-            },
-            _ => ()
+        // ctx.request_focus();
+        if data.edit_tool == EditTool::Pencil || data.edit_tool == EditTool::Highlighter{
+            ctx.set_cursor(&Cursor::Arrow);
+            match event {
+                Event::MouseDown(_mouse_event) => {
+                    ctx.set_active(true);
+                    let color = match data.color_tool{
+                        ColorTool::Black => Color::BLACK,
+                        ColorTool::Red => Color::RED,
+                        ColorTool::Blue => Color::BLUE,
+                        ColorTool::Yellow => Color::YELLOW,
+                        ColorTool::White => Color::WHITE,
+                        ColorTool::Green => Color::GREEN,
+                    };
+                    if data.edit_tool == EditTool::Highlighter {
+                        data.draw.points[data.draw.segment].3 = 0.5;
+                    }
+                    else {
+                        data.draw.points[data.draw.segment].3 = 1.;
+                    }
+                    data.draw.points[data.draw.segment].1 = color;
+                    data.draw.points[data.draw.segment].2 = data.line_thickness;
+                    self.flag_drawing = true;
+                },
+                Event::MouseMove(mouse_event) => {
+                    if self.flag_drawing && is_in_image(mouse_event.pos, data) && ctx.is_active() {
+                        data.draw.points[data.draw.segment].0.push_back(mouse_event.pos);
+                    }
+                },
+                Event::MouseUp(_mouse_event) => {
+                    ctx.set_active(false);
+                    if data.edit_tool == EditTool::Highlighter {
+                        data.draw.points.push_back((im::Vector::new(), Color::WHITE, 1., 0.5));
+                    }
+                    else {
+                        data.draw.points.push_back((im::Vector::new(), Color::WHITE, 1., 1.));
+                    }
+                    data.draw.segment += 1;
+                    self.flag_drawing = false;
+                },
+                _ => ()
+            }
         }
+        else if data.edit_tool == EditTool::Text{
+            ctx.request_focus();
+            match event{
+                Event::MouseDown(mouse_event) => {
+                    self.flag_writing = true;
+                   
+                    data.write.0[data.write.1].position = mouse_event.pos;
+                    
+                    let ev_x = mouse_event.pos.x;
+                    let ev_y = mouse_event.pos.y;
+
+                    for (index, text) in data.write.0.iter().enumerate(){
+                        let txt_x = text.position.x;
+                        let txt_y = text.position.y;
+                        let w = text.dimensions.0; 
+                        let h = text.dimensions.1;
+                        if ev_x > txt_x && ev_x < txt_x + w && ev_y > txt_y && ev_y < txt_y + h {
+                            data.editing_text = index as i32;
+                            self.first_click_pos = mouse_event.pos;
+                            ctx.set_active(true);
+                            ctx.set_cursor(&Cursor::Pointer);
+                            break;
+                        }else{
+                            data.text = "".to_string();
+                            data.editing_text = -1;
+                        }
+                    }
+
+                    if data.editing_text != -1 {
+                        data.text = data.write.0[data.editing_text as usize].text.clone();
+                    }
+
+                }
+                Event::MouseMove(mouse_event) => {
+                    if ctx.is_active() {
+                        
+                        let txt_w =  data.write.0[data.editing_text as usize].dimensions.0;
+                        let txt_h =  data.write.0[data.editing_text as usize].dimensions.1;
+                        let pos_init = data.write.0[data.editing_text as usize].position;
+                        let pos_final = Point::new(data.write.0[data.editing_text as usize].position.x + txt_w, data.write.0[data.editing_text as usize].position.y + txt_h);
+
+
+                        
+                        if data.editing_text != -1 && is_in_image(mouse_event.pos, data){ 
+                            
+                            let delta_x = mouse_event.pos.x - self.first_click_pos.x;
+                            let delta_y = mouse_event.pos.y - self.first_click_pos.y;
+                            self.first_click_pos = mouse_event.pos;
+                            if is_in_image(Point::new(pos_init.x + delta_x, pos_init.y + delta_y), data) && is_in_image(Point::new(pos_final.x + delta_x, pos_final.y + delta_y), data){
+                                data.write.0[data.editing_text as usize].position = Point::new(pos_init.x + delta_x, pos_init.y + delta_y);
+                            }
+                        }
+                    }
+
+                }
+                Event::MouseUp(_ev) => {
+                    // data.editing_text = -1;
+                    ctx.set_cursor(&Cursor::Arrow);
+                    ctx.set_active(false);
+                }
+                // Event::KeyDown(_key_event) => {
+                //     println!("kkswm");
+                //     data.write.0[data.write.1].text = data.text.clone();
+                // }
+                _ => {}
+            }
+        }
+        // else if data.edit_tool == EditTool::Shape{
+        //     Event::MouseDown(mouse_event) => {
+
+        //     }
+        // }
     }
+
 }
 
 fn is_in_image(point: Point, data: &Screenshot) -> bool{
@@ -686,3 +762,5 @@ fn is_in_image(point: Point, data: &Screenshot) -> bool{
     point.x <= data.resized_area.x + data.resized_area.width && 
     point.y <= data.resized_area.y + data.resized_area.height  
 }
+
+

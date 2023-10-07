@@ -740,18 +740,45 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
                     ctx.set_cursor(&Cursor::Arrow);
                     ctx.set_active(false);
                 }
-                // Event::KeyDown(_key_event) => {
-                //     println!("kkswm");
-                //     data.write.0[data.write.1].text = data.text.clone();
-                // }
                 _ => {}
             }
         }
-        // else if data.edit_tool == EditTool::Shape{
-        //     Event::MouseDown(mouse_event) => {
+        else if data.edit_tool == EditTool::Shape{
+            if data.shape_tool == ShapeTool::Arrow{
+                match event{
+                    Event::MouseDown(mouse_event) => {
+                        ctx.set_active(true);
+                        let color = match data.color_tool{
+                            ColorTool::Black => Color::BLACK,
+                            ColorTool::Red => Color::RED,
+                            ColorTool::Blue => Color::BLUE,
+                            ColorTool::Yellow => Color::YELLOW,
+                            ColorTool::White => Color::WHITE,
+                            ColorTool::Green => Color::GREEN,
+                        };
+                        data.arrows.0[data.arrows.1].start = mouse_event.pos;
+                        data.arrows.0[data.arrows.1].end = mouse_event.pos;
+                        data.arrows.0[data.arrows.1].color = color;
+                        data.arrows.0[data.arrows.1].thickness = data.line_thickness;
+                    }
+                    Event::MouseMove(mouse_event) => {
+                        if ctx.is_active() && is_in_image(mouse_event.pos, data) {
+                            data.arrows.0[data.arrows.1].end = mouse_event.pos;
+                        }
+                    }
+                    Event::MouseUp(_mouse_event) => {
+                        ctx.set_active(false);
+                        data.arrows.0.push_back(Arrow::new());
+                        data.arrows.1 += 1;
+                    }
+                    _ => {}
+                }
+            }else if data.shape_tool == ShapeTool::Circle{
 
-        //     }
-        // }
+            }else if data.shape_tool == ShapeTool::Square{
+
+            }
+        }
     }
 
 }

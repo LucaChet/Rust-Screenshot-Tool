@@ -176,8 +176,15 @@ impl Write{
 
 #[derive(Clone, Data, Lens)]
 pub struct Arrow{
-    pub start: f64,
-    pub end: f64,
+    pub start: Point,
+    pub end: Point,
+    pub color: Color,
+    pub thickness: f64,
+}
+impl Arrow {
+    pub fn new()->Self{
+        Self { start: Point::new(0., 0.), end: Point::new(0., 0.), color: Color::WHITE, thickness: 1. }
+    }
 }
 
 #[derive(Clone, Data, Lens)]
@@ -208,7 +215,7 @@ pub struct Screenshot {
     pub shape_tool: ShapeTool,
     pub draw: Draw,
     pub write: (im::Vector<Write>, usize),
-    pub arrows: im::Vector<Arrow>,
+    pub arrows: (im::Vector<Arrow>, usize),
     pub text: String,
     pub editing_text: i32,
     pub line_thickness: f64,
@@ -230,6 +237,9 @@ impl Screenshot {
 
         let mut text: im::Vector<Write> = im::Vector::new();
         text.push_back(Write::new());
+
+        let mut arrows = im::Vector::new();
+        arrows.push_back(Arrow::new()); 
 
         Self {
             name,
@@ -259,7 +269,7 @@ impl Screenshot {
             draw: Draw { points, segment: 0},
             write: (text, 0),
             text: String::from(""),
-            arrows: im::Vector::new(),
+            arrows: (arrows, 0),
             editing_text: -1,
             line_thickness: 3.,
         }
@@ -600,6 +610,10 @@ pub fn build_toolbar() -> impl Widget<Screenshot>{
             data.write.0.clear();
             data.write.0.push_back(Write::new());
             data.write.1 = 0;
+
+            data.arrows.0.clear();
+            data.arrows.0.push_back(Arrow::new());
+            data.arrows.1 = 0;
         }
     );
 
@@ -953,7 +967,7 @@ pub fn draw_resize(data: &Screenshot) -> impl Widget<Screenshot>{
 }
 
 pub fn manage_edit(_data: &Screenshot) -> impl Widget<Screenshot>{
-    let paint = Painter::new(|ctx: &mut PaintCtx<'_, '_, '_>, data: &Screenshot, env| {
+    let paint = Painter::new(|ctx: &mut PaintCtx<'_, '_, '_>, data: &Screenshot, _env| {
         // if data.edit_tool == EditTool::Pencil || data.edit_tool == EditTool::Highlighter{
             //GESTIONE DRAW
             let color = match data.color_tool{
@@ -1012,8 +1026,48 @@ pub fn manage_edit(_data: &Screenshot) -> impl Widget<Screenshot>{
                 ctx.draw_text(&text_layout, write.position);
             }
 
-            //GESTIONE SHAPE
-            // Shape::
+            //GESTIONE ARROW
+            let start = data.arrows.0[data.arrows.1].start;
+            let end = data.arrows.0[data.arrows.1].end;
+            
+            let direction = (end - start).normalize(); // Calcola la direzione della freccia
+            let direction2 = kurbo::Vec2::from_angle(direction.angle() + 50.);
+            let direction3 = kurbo::Vec2::from_angle(direction.angle() - 50.);
+
+            let len = end.distance(start);
+            let arrow_base1 = end - direction2 * len*1./3.;
+            let arrow_base2 = end - direction3 * len*1./3.;
+            
+            let mut path2 = BezPath::new();
+            path2.move_to(start);
+            path2.line_to(end);
+            path2.move_to(end);
+            path2.line_to(arrow_base1);
+            path2.move_to(end);
+            path2.line_to(arrow_base2);
+            ctx.stroke(path2, &color, data.line_thickness);
+
+            for arrow in data.arrows.0.clone(){
+                let start = arrow.start;
+                let end = arrow.end;
+                
+                let direction = (end - start).normalize(); // Calcola la direzione della freccia
+                let direction2 = kurbo::Vec2::from_angle(direction.angle() + 50.);
+                let direction3 = kurbo::Vec2::from_angle(direction.angle() - 50.);
+
+                let len = end.distance(start);
+                let arrow_base1 = end - direction2 * len*1./3.;
+                let arrow_base2 = end - direction3 * len*1./3.;
+                
+                let mut path2 = BezPath::new();
+                path2.move_to(start);
+                path2.line_to(end);
+                path2.move_to(end);
+                path2.line_to(arrow_base1);
+                path2.move_to(end);
+                path2.line_to(arrow_base2);
+                ctx.stroke(path2, &arrow.color, arrow.thickness);
+            }
 
     })
     .controller(Drawer {

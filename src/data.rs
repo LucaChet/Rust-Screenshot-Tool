@@ -188,6 +188,19 @@ impl Arrow {
 }
 
 #[derive(Clone, Data, Lens)]
+pub struct Circle{
+    pub start: Point,
+    pub end: Point,
+    pub color: Color,
+    pub thickness: f64,
+}
+impl Circle {
+    pub fn new()->Self{
+        Self { start: Point::new(0., 0.), end: Point::new(0., 0.), color: Color::WHITE, thickness: 1. }
+    }
+}
+
+#[derive(Clone, Data, Lens)]
 pub struct Screenshot {
     pub name: String,
     pub format: Format,
@@ -216,6 +229,7 @@ pub struct Screenshot {
     pub draw: Draw,
     pub write: (im::Vector<Write>, usize),
     pub arrows: (im::Vector<Arrow>, usize),
+    pub circles: (im::Vector<Circle>, usize),
     pub text: String,
     pub editing_text: i32,
     pub line_thickness: f64,
@@ -241,6 +255,9 @@ impl Screenshot {
         let mut arrows = im::Vector::new();
         arrows.push_back(Arrow::new()); 
 
+        let mut circles = im::Vector::new();
+        circles.push_back(Circle::new()); 
+        
         Self {
             name,
             format,
@@ -270,6 +287,7 @@ impl Screenshot {
             write: (text, 0),
             text: String::from(""),
             arrows: (arrows, 0),
+            circles: (circles, 0),
             editing_text: -1,
             line_thickness: 3.,
         }
@@ -980,7 +998,7 @@ pub fn manage_edit(_data: &Screenshot) -> impl Widget<Screenshot>{
             };
 
             let point0 = Point::new(0.0, 0.0);
-            let mut path = BezPath::new();
+            let mut path = druid::kurbo::BezPath::new();
 
             path.move_to(data.draw.points[data.draw.segment].0.head().unwrap_or(&point0).clone());
             for point in data.draw.points[data.draw.segment].0.iter().skip(1) {
@@ -990,7 +1008,7 @@ pub fn manage_edit(_data: &Screenshot) -> impl Widget<Screenshot>{
             ctx.stroke(path, &brush, data.line_thickness);
 
             for i in 0..data.draw.segment{
-                let mut path = BezPath::new();
+                let mut path = druid::kurbo::BezPath::new();
                 path.move_to(data.draw.points[i].0.head().unwrap_or(&point0).clone());
                 for point in data.draw.points[i].0.iter().skip(1) {
                     path.line_to(point.clone());
@@ -1029,16 +1047,19 @@ pub fn manage_edit(_data: &Screenshot) -> impl Widget<Screenshot>{
             //GESTIONE ARROW
             let start = data.arrows.0[data.arrows.1].start;
             let end = data.arrows.0[data.arrows.1].end;
+
+            // let k_start = kurbo::Point::new(start.x, start.y);
+            // let k_end = kurbo::Point::new(end.x, end.y);
             
             let direction = (end - start).normalize(); // Calcola la direzione della freccia
-            let direction2 = kurbo::Vec2::from_angle(direction.angle() + 50.);
-            let direction3 = kurbo::Vec2::from_angle(direction.angle() - 50.);
+            let direction2 = druid::kurbo::Vec2::from_angle(direction.angle() + 50.);
+            let direction3 = druid::kurbo::Vec2::from_angle(direction.angle() - 50.);
 
             let len = end.distance(start);
             let arrow_base1 = end - direction2 * len*1./3.;
             let arrow_base2 = end - direction3 * len*1./3.;
             
-            let mut path2 = BezPath::new();
+            let mut path2 = druid::kurbo::BezPath::new();
             path2.move_to(start);
             path2.line_to(end);
             path2.move_to(end);
@@ -1052,14 +1073,14 @@ pub fn manage_edit(_data: &Screenshot) -> impl Widget<Screenshot>{
                 let end = arrow.end;
                 
                 let direction = (end - start).normalize(); // Calcola la direzione della freccia
-                let direction2 = kurbo::Vec2::from_angle(direction.angle() + 50.);
-                let direction3 = kurbo::Vec2::from_angle(direction.angle() - 50.);
+                let direction2 = druid::kurbo::Vec2::from_angle(direction.angle() + 50.);
+                let direction3 = druid::kurbo::Vec2::from_angle(direction.angle() - 50.);
 
                 let len = end.distance(start);
                 let arrow_base1 = end - direction2 * len*1./3.;
                 let arrow_base2 = end - direction3 * len*1./3.;
                 
-                let mut path2 = BezPath::new();
+                let mut path2 = druid::kurbo::BezPath::new();
                 path2.move_to(start);
                 path2.line_to(end);
                 path2.move_to(end);
@@ -1068,6 +1089,10 @@ pub fn manage_edit(_data: &Screenshot) -> impl Widget<Screenshot>{
                 path2.line_to(arrow_base2);
                 ctx.stroke(path2, &arrow.color, arrow.thickness);
             }
+
+            //GESTIONE CIRCLE
+            // let rect: Rect::from_points()
+            // let shape = kurbo::Ellipse::new(center, radii, x_rotation);
 
     })
     .controller(Drawer {

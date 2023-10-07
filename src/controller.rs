@@ -774,7 +774,34 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
                     _ => {}
                 }
             }else if data.shape_tool == ShapeTool::Circle{
-
+                match event{
+                    Event::MouseDown(mouse_event) => {
+                        ctx.set_active(true);
+                        let color = match data.color_tool{
+                            ColorTool::Black => Color::BLACK,
+                            ColorTool::Red => Color::RED,
+                            ColorTool::Blue => Color::BLUE,
+                            ColorTool::Yellow => Color::YELLOW,
+                            ColorTool::White => Color::WHITE,
+                            ColorTool::Green => Color::GREEN,
+                        };
+                        data.circles.0[data.circles.1].start = mouse_event.pos;
+                        data.circles.0[data.circles.1].end = mouse_event.pos;
+                        data.circles.0[data.circles.1].color = color;
+                        data.circles.0[data.circles.1].thickness = data.line_thickness;
+                    }
+                    Event::MouseMove(mouse_event) => {
+                        if ctx.is_active() && is_in_image(mouse_event.pos, data) {
+                            data.circles.0[data.circles.1].end = mouse_event.pos;
+                        }
+                    }
+                    Event::MouseUp(_mouse_event) => {
+                        ctx.set_active(false);
+                        data.circles.0.push_back(Circle::new());
+                        data.circles.1 += 1;
+                    }
+                    _ => {}
+                }
             }else if data.shape_tool == ShapeTool::Square{
 
             }

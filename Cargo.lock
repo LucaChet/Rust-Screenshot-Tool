@@ -1574,6 +1574,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "kurbo"
+version = "0.10.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a4e6eb607c22d8418210a48f385a6c414e690d2ffcfe670083df0f5417c3deb6"
+dependencies = [
+ "arrayvec",
+ "smallvec",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3152,7 +3162,7 @@ dependencies = [
  "duration-string",
  "im",
  "image 0.24.7",
- "kurbo 0.9.5",
+ "kurbo 0.10.3",
  "nalgebra",
  "native-dialog",
  "piet",

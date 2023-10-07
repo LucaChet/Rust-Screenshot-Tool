@@ -4,7 +4,7 @@ use druid::{
     },
     FontDescriptor, FontFamily, Color, Data, Env, EventCtx, ImageBuf, Lens,
     PaintCtx, Point, RenderContext, TimerToken,
-    Widget, WidgetExt, WindowDesc, WindowState,
+    Widget, WidgetExt, WindowDesc, WindowState, Rect,
 };
 use im::HashMap;
 use image::{ImageBuffer, Rgba, DynamicImage};
@@ -201,6 +201,19 @@ impl Circle {
 }
 
 #[derive(Clone, Data, Lens)]
+pub struct Square{
+    pub start: Point,
+    pub end: Point,
+    pub color: Color,
+    pub thickness: f64,
+}
+impl Square {
+    pub fn new()->Self{
+        Self { start: Point::new(0., 0.), end: Point::new(0., 0.), color: Color::WHITE, thickness: 1. }
+    }
+}
+
+#[derive(Clone, Data, Lens)]
 pub struct Screenshot {
     pub name: String,
     pub format: Format,
@@ -230,6 +243,7 @@ pub struct Screenshot {
     pub write: (im::Vector<Write>, usize),
     pub arrows: (im::Vector<Arrow>, usize),
     pub circles: (im::Vector<Circle>, usize),
+    pub squares: (im::Vector<Square>, usize),
     pub text: String,
     pub editing_text: i32,
     pub line_thickness: f64,
@@ -257,6 +271,9 @@ impl Screenshot {
 
         let mut circles = im::Vector::new();
         circles.push_back(Circle::new()); 
+
+        let mut squares = im::Vector::new();
+        squares.push_back(Square::new());
         
         Self {
             name,
@@ -288,6 +305,7 @@ impl Screenshot {
             text: String::from(""),
             arrows: (arrows, 0),
             circles: (circles, 0),
+            squares: (squares, 0),
             editing_text: -1,
             line_thickness: 3.,
         }
@@ -632,6 +650,14 @@ pub fn build_toolbar() -> impl Widget<Screenshot>{
             data.arrows.0.clear();
             data.arrows.0.push_back(Arrow::new());
             data.arrows.1 = 0;
+
+            data.circles.0.clear();
+            data.circles.0.push_back(Circle::new());
+            data.circles.1 = 0;
+
+            data.squares.0.clear();
+            data.squares.0.push_back(Square::new());
+            data.squares.1 = 0;
         }
     );
 
@@ -986,7 +1012,7 @@ pub fn draw_resize(data: &Screenshot) -> impl Widget<Screenshot>{
 
 pub fn manage_edit(_data: &Screenshot) -> impl Widget<Screenshot>{
     let paint = Painter::new(|ctx: &mut PaintCtx<'_, '_, '_>, data: &Screenshot, _env| {
-        // if data.edit_tool == EditTool::Pencil || data.edit_tool == EditTool::Highlighter{
+        
             //GESTIONE DRAW
             let color = match data.color_tool{
                 ColorTool::Black => Color::BLACK,
@@ -1035,7 +1061,6 @@ pub fn manage_edit(_data: &Screenshot) -> impl Widget<Screenshot>{
             }
 
             for write in data.write.0.clone(){
-                // let color = data.write.0[data.write.1].color;
                 let text_layout = ctx.text().new_text_layout(write.text)
                 .font(FontFamily::MONOSPACE, write.thickness)
                 .text_color(write.color)
@@ -1044,13 +1069,10 @@ pub fn manage_edit(_data: &Screenshot) -> impl Widget<Screenshot>{
                 ctx.draw_text(&text_layout, write.position);
             }
 
-            //GESTIONE ARROW
+            //GESTIONE ARROW          
             let start = data.arrows.0[data.arrows.1].start;
             let end = data.arrows.0[data.arrows.1].end;
 
-            // let k_start = kurbo::Point::new(start.x, start.y);
-            // let k_end = kurbo::Point::new(end.x, end.y);
-            
             let direction = (end - start).normalize(); // Calcola la direzione della freccia
             let direction2 = druid::kurbo::Vec2::from_angle(direction.angle() + 50.);
             let direction3 = druid::kurbo::Vec2::from_angle(direction.angle() - 50.);
@@ -1067,7 +1089,7 @@ pub fn manage_edit(_data: &Screenshot) -> impl Widget<Screenshot>{
             path2.move_to(end);
             path2.line_to(arrow_base2);
             ctx.stroke(path2, &color, data.line_thickness);
-
+            
             for arrow in data.arrows.0.clone(){
                 let start = arrow.start;
                 let end = arrow.end;
@@ -1091,8 +1113,29 @@ pub fn manage_edit(_data: &Screenshot) -> impl Widget<Screenshot>{
             }
 
             //GESTIONE CIRCLE
-            // let rect: Rect::from_points()
-            // let shape = kurbo::Ellipse::new(center, radii, x_rotation);
+            let rect = druid::Rect::from_points(data.circles.0[data.circles.1].start, data.circles.0[data.circles.1].end);
+            let ellipse = druid::kurbo::Ellipse::from_rect(rect);
+            ctx.stroke(ellipse, &color, data.line_thickness);
+        
+            for circle in data.circles.0.clone(){
+                let rect = druid::Rect::from_points(circle.start, circle.end);
+                let ellipse = druid::kurbo::Ellipse::from_rect(rect);
+                ctx.stroke(ellipse, &circle.color, circle.thickness);
+            }
+
+            //GESTIONE SQUARE
+            if data.squares.0[data.squares.1].start != data.squares.0[data.squares.1].end {
+                let rect = druid::Rect::from_points(data.squares.0[data.squares.1].start, data.squares.0[data.squares.1].end);
+                ctx.stroke(rect, &color, data.line_thickness);
+            }
+
+            for square in data.squares.0.clone(){
+                if square.start != square.end{
+                    let rect = druid::Rect::from_points(square.start, square.end);
+                    ctx.stroke(rect, &square.color, square.thickness);
+                }
+            }
+            
 
     })
     .controller(Drawer {

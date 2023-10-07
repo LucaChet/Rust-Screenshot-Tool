@@ -681,7 +681,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
             }
         }
         else if data.edit_tool == EditTool::Text{
-            ctx.request_focus();
+            // ctx.request_focus();
             match event{
                 Event::MouseDown(mouse_event) => {
                     self.flag_writing = true;
@@ -803,7 +803,34 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
                     _ => {}
                 }
             }else if data.shape_tool == ShapeTool::Square{
-
+                match event{
+                    Event::MouseDown(mouse_event) => {
+                        ctx.set_active(true);
+                        let color = match data.color_tool{
+                            ColorTool::Black => Color::BLACK,
+                            ColorTool::Red => Color::RED,
+                            ColorTool::Blue => Color::BLUE,
+                            ColorTool::Yellow => Color::YELLOW,
+                            ColorTool::White => Color::WHITE,
+                            ColorTool::Green => Color::GREEN,
+                        };
+                        data.squares.0[data.squares.1].start = mouse_event.pos;
+                        data.squares.0[data.squares.1].end = mouse_event.pos;
+                        data.squares.0[data.squares.1].color = color;
+                        data.squares.0[data.squares.1].thickness = data.line_thickness;
+                    }
+                    Event::MouseMove(mouse_event) => {
+                        if ctx.is_active() && is_in_image(mouse_event.pos, data) {
+                            data.squares.0[data.squares.1].end = mouse_event.pos;
+                        }
+                    }
+                    Event::MouseUp(_mouse_event) => {
+                        ctx.set_active(false);
+                        data.squares.0.push_back(Square::new());
+                        data.squares.1 += 1;
+                    }
+                    _ => {}
+                }
             }
         }
     }

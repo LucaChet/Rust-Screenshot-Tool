@@ -9,8 +9,7 @@ use druid::{
 use im::HashMap;
 use image::{ImageBuffer, Rgba, DynamicImage};
 use kurbo::{Shape, BezPath};
-use piet_common::{D2DTextLayout, Text, TextLayoutBuilder};
-
+use piet_common::{/*D2DTextLayout, */Text, TextLayoutBuilder};
 use crate::controller::*;
 use arboard::Clipboard;
 use arboard::ImageData;
@@ -60,6 +59,7 @@ pub enum EditTool{
     Highlighter,
     Shape,
     Text,
+    Eraser,
 }
 
 #[derive(Clone, Data, PartialEq, Debug, Serialize, Deserialize)]
@@ -561,6 +561,22 @@ pub fn build_toolbar() -> impl Widget<Screenshot>{
         ),
     );
 
+    let eraser = Either::new(
+        |data, _| data.edit_tool == EditTool::Eraser,
+        Image::new(ImageBuf::from_data(include_bytes!("../target/svg/eraser1.png")).unwrap()).fix_size(30., 30.).on_click(
+            |_ctx, data: &mut Screenshot, _: &Env|{
+                data.edit_tool = EditTool::Eraser;
+                data.line_thickness = 20.;
+            }
+        ).border( Color::BLACK, 2.).background(Color::GRAY),
+        Image::new(ImageBuf::from_data(include_bytes!("../target/svg/eraser1.png")).unwrap()).fix_size(30., 30.).on_click(
+            |_ctx, data: &mut Screenshot, _: &Env|{
+                data.edit_tool = EditTool::Eraser;
+                data.line_thickness = 20.;
+            }
+        ),
+    );
+
     let mut row_color = Flex::row();
     row_color.add_child(Either::new(
         |data: &Screenshot, _| data.color_tool == ColorTool::White,
@@ -816,6 +832,8 @@ pub fn build_toolbar() -> impl Widget<Screenshot>{
     row.add_child(shapes);
     row.add_default_spacer();
     row.add_child(text);
+    row.add_default_spacer();
+    row.add_child(eraser);
     row.add_default_spacer();
     row.add_default_spacer();
     row.add_child(row_color.border(Color::GRAY, 2.));

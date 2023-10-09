@@ -833,6 +833,56 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
                 }
             }
         }
+        else if data.edit_tool == EditTool::Eraser{
+            match event{
+                Event::MouseDown(_mouse_event) => ctx.set_active(true),
+                Event::MouseMove(mouse_event) => {
+                    if ctx.is_active(){
+
+                        //erase free hand shapes
+                        for (index, track) in data.draw.points.clone().iter().enumerate(){ //check all tracks present on the image
+                            for point in track.0.clone() { //check all the points of each track
+                                if mouse_event.pos.distance(point) < 10. { //if an intersection is found, remove the entire track from the draw
+                                    data.draw.points.remove(index);
+                                    data.draw.segment -= 1;
+                                    break;
+                                }
+                            }
+                        }
+
+                        //erase arrows
+                        for (index, arrow) in data.arrows.0.clone().iter().enumerate(){
+                            if mouse_event.pos.distance(arrow.start) < 10. || mouse_event.pos.distance(arrow.end) < 10. { //TO BE BETTER DEFINED -> how do I model distance from arrow axis?
+                                data.arrows.0.remove(index);
+                                data.arrows.1 -= 1;
+                                break;
+                            }
+                        }
+
+                        //erase squares
+                        for(index, square) in data.squares.0.clone().iter().enumerate(){
+                            if is_in_square(mouse_event.pos, square.start, square.end){
+                                data.squares.0.remove(index);
+                                data.squares.1 -= 1;
+                                break;
+                            }
+                        }
+
+
+                        //erase circles
+                        for(index, circle_sq) in data.circles.0.clone().iter().enumerate(){
+                            if is_in_square(mouse_event.pos, circle_sq.start, circle_sq.end){ 
+                                data.circles.0.remove(index);
+                                data.circles.1 -= 1;
+                                break;
+                            }
+                        }
+                    }
+                },
+                Event::MouseUp(_mouse_event) => ctx.set_active(false),
+                _ => ()
+            }
+        }
     }
 
 }
@@ -845,3 +895,25 @@ fn is_in_image(point: Point, data: &Screenshot) -> bool{
 }
 
 
+fn is_in_square(point: Point, square_start: Point, square_end: Point) -> bool{
+    let p0 = Point::new(min(square_start.x, square_end.x), min(square_start.y, square_end.y));
+    let p1 = Point::new(max(square_start.x, square_end.x), max(square_start.y, square_end.y));
+    point.x >= p0.x && 
+    point.y >= p0.y && 
+    point.x <= p1.x && 
+    point.y <= p1.y
+}
+
+fn min(val1: f64, val2:f64) -> f64 {
+    if val1<val2{
+        return val1
+    };
+    val2
+}
+
+fn max(val1: f64, val2:f64) -> f64 {
+    if val1>val2{
+        return val1
+    };
+    val2
+}

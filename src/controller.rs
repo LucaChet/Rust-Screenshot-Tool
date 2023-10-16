@@ -835,7 +835,11 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
         }
         else if data.edit_tool == EditTool::Eraser{
             match event{
-                Event::MouseDown(_mouse_event) => ctx.set_active(true),
+                Event::MouseDown(_mouse_event) => {
+                    ctx.set_active(true);
+                    data.custom_cursor = ctx.window().make_cursor(&data.custom_cursor_desc).unwrap_or(Cursor::Crosshair);
+                    ctx.set_cursor(&data.custom_cursor);
+                },
                 Event::MouseMove(mouse_event) => {
                     if ctx.is_active(){
 
@@ -852,10 +856,12 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
 
                         //erase arrows
                         for (index, arrow) in data.arrows.0.clone().iter().enumerate(){
-                            if mouse_event.pos.distance(arrow.start) < 10. || mouse_event.pos.distance(arrow.end) < 10. { //TO BE BETTER DEFINED -> how do I model distance from arrow axis?
-                                data.arrows.0.remove(index);
-                                data.arrows.1 -= 1;
-                                break;
+                            for p in arrow_body_points(arrow.start, arrow.end) {
+                                if mouse_event.pos.distance(p) < 10. { 
+                                    data.arrows.0.remove(index);
+                                    data.arrows.1 -= 1;
+                                    break;
+                                }
                             }
                         }
 
@@ -879,7 +885,10 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
                         }
                     }
                 },
-                Event::MouseUp(_mouse_event) => ctx.set_active(false),
+                Event::MouseUp(_mouse_event) => {
+                    ctx.set_active(false);
+                    ctx.set_cursor(&Cursor::Arrow);
+                },
                 _ => ()
             }
         }
@@ -902,6 +911,27 @@ fn is_in_square(point: Point, square_start: Point, square_end: Point) -> bool{
     point.y >= p0.y && 
     point.x <= p1.x && 
     point.y <= p1.y
+}
+
+fn arrow_body_points(start: Point, end: Point) -> Vec<Point>{
+    let mut segment = Vec::new();
+    
+    // segment lenght
+    let dx = end.x - start.x;
+    let dy = end.y - start.y;
+    let len = (dx * dx + dy * dy).sqrt();
+    
+    // segment direction
+    let dir_x = dx / len;
+    let dir_y = dy / len;
+    
+    // Calcoliamo i punti intermedi sul segmento
+    for t in 0..=len as usize {
+        let x = start.x + t as f64 * dir_x;
+        let y = start.y + t as f64 * dir_y;
+        segment.push(Point::new(x, y));
+    }
+    segment
 }
 
 fn min(val1: f64, val2:f64) -> f64 {

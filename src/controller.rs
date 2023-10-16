@@ -1,7 +1,7 @@
 use druid::{
     Selector, WindowDesc, commands, AppDelegate, Code, Command, Cursor, DelegateCtx, Env, Event, EventCtx
     ,Handled, LocalizedString, MouseButton, Point, Target, Widget, Color,
-    WindowState,
+    WindowState, CursorDesc, ImageBuf
 };
 use kurbo::BezPath;
 use std::time::Duration;
@@ -639,10 +639,23 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
     ) { 
         // ctx.request_focus();
         if data.edit_tool == EditTool::Pencil || data.edit_tool == EditTool::Highlighter{
-            ctx.set_cursor(&Cursor::Arrow);
+            // ctx.set_cursor(&Cursor::Arrow);
             match event {
                 Event::MouseDown(_mouse_event) => {
                     ctx.set_active(true);
+
+                    if data.edit_tool == EditTool::Pencil{
+                        let cursor_image = ImageBuf::from_data(include_bytes!("./svg/icons8-pencil-48.png")).unwrap();
+                        data.custom_cursor_desc = CursorDesc::new(cursor_image, (0.0, 48.0));
+                        data.custom_cursor = ctx.window().make_cursor(&data.custom_cursor_desc).unwrap_or(Cursor::Crosshair);
+                        ctx.set_cursor(&data.custom_cursor);
+                    }else if data.edit_tool == EditTool::Highlighter{
+                        let cursor_image = ImageBuf::from_data(include_bytes!("./svg/icons8-highlighter-48.png")).unwrap();
+                        data.custom_cursor_desc = CursorDesc::new(cursor_image, (0., 48.0));
+                        data.custom_cursor = ctx.window().make_cursor(&data.custom_cursor_desc).unwrap_or(Cursor::Crosshair);
+                        ctx.set_cursor(&data.custom_cursor);
+                    }
+                    
                     let color = match data.color_tool{
                         ColorTool::Black => Color::BLACK,
                         ColorTool::Red => Color::RED,
@@ -676,6 +689,8 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
                     }
                     data.draw.segment += 1;
                     self.flag_drawing = false;
+                    ctx.set_cursor(&Cursor::Arrow);
+
                 },
                 _ => ()
             }
@@ -837,6 +852,10 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
             match event{
                 Event::MouseDown(_mouse_event) => {
                     ctx.set_active(true);
+
+                    let cursor_image = ImageBuf::from_data(include_bytes!("./svg/eraser2-30.png")).unwrap();
+                    data.custom_cursor_desc = CursorDesc::new(cursor_image, (0.0, 30.0));
+
                     data.custom_cursor = ctx.window().make_cursor(&data.custom_cursor_desc).unwrap_or(Cursor::Crosshair);
                     ctx.set_cursor(&data.custom_cursor);
                 },

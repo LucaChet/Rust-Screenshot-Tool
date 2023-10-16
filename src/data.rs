@@ -278,7 +278,7 @@ impl Screenshot {
         let mut squares = im::Vector::new();
         squares.push_back(Square::new());
         
-        let cursor_image = ImageBuf::from_data(include_bytes!("./svg/chickpea.png")).unwrap();
+        let cursor_image = ImageBuf::from_data(include_bytes!("./svg/icons8-pencil-48.png")).unwrap();
         // The (0,0) refers to where the "hotspot" is located, so where the mouse actually points.
         // (0,0) is the top left, and (cursor_image.width(), cursor_image.width()) the bottom right.
         let custom_cursor_desc = CursorDesc::new(cursor_image, (0.0, 0.0));
@@ -511,7 +511,7 @@ pub fn build_toolbar() -> impl Widget<Screenshot>{
     let mut row = Flex::row();
     let pencil = Either::new(
         |data, _| data.edit_tool == EditTool::Pencil,
-        Image::new(ImageBuf::from_data(include_bytes!("./svg/icons8-pencil-48.png")).unwrap()).on_click(
+        Image::new(ImageBuf::from_data(include_bytes!("./svg/icons8-pencil-48.png")).unwrap()).fix_size(30., 30.).on_click(
             |_ctx, data: &mut Screenshot, _: &Env|{
                 data.edit_tool = EditTool::Pencil;
                 data.line_thickness = 3.;
@@ -546,11 +546,13 @@ pub fn build_toolbar() -> impl Widget<Screenshot>{
         Image::new(ImageBuf::from_data(include_bytes!("./svg/icons8-shape-32.png")).unwrap()).fix_size(30., 30.).on_click(
             |_ctx, data: &mut Screenshot, _: &Env|{
                 data.edit_tool = EditTool::Shape;
+                data.line_thickness = 3.;
             }
         ).border( Color::BLACK, 2.).background(Color::GRAY),
         Image::new(ImageBuf::from_data(include_bytes!("./svg/icons8-shape-32.png")).unwrap()).fix_size(30., 30.).on_click(
             |_ctx, data: &mut Screenshot, _: &Env|{
                 data.edit_tool = EditTool::Shape;
+                data.line_thickness = 3.;
             }
         ),
     );
@@ -573,12 +575,12 @@ pub fn build_toolbar() -> impl Widget<Screenshot>{
 
     let eraser = Either::new(
         |data, _| data.edit_tool == EditTool::Eraser,
-        Image::new(ImageBuf::from_data(include_bytes!("./svg/eraser1.png")).unwrap()).fix_size(30., 30.).on_click(
+        Image::new(ImageBuf::from_data(include_bytes!("./svg/eraser2.png")).unwrap()).fix_size(30., 30.).on_click(
             |_ctx, data: &mut Screenshot, _: &Env|{
                 data.edit_tool = EditTool::Eraser;
             }
         ).border( Color::BLACK, 2.).background(Color::GRAY),
-        Image::new(ImageBuf::from_data(include_bytes!("./svg/eraser1.png")).unwrap()).fix_size(30., 30.).on_click(
+        Image::new(ImageBuf::from_data(include_bytes!("./svg/eraser2.png")).unwrap()).fix_size(30., 30.).on_click(
             |_ctx, data: &mut Screenshot, _: &Env|{
                 data.edit_tool = EditTool::Eraser;
             }
@@ -1036,7 +1038,7 @@ pub fn draw_resize(data: &Screenshot) -> impl Widget<Screenshot>{
     })
 }
 
-pub fn manage_edit(_data: &Screenshot) -> impl Widget<Screenshot>{
+pub fn manage_edit(data: &Screenshot) -> impl Widget<Screenshot>{
     let paint = Painter::new(|ctx: &mut PaintCtx<'_, '_, '_>, data: &Screenshot, _env| {
         
             //GESTIONE DRAW
@@ -1161,7 +1163,7 @@ pub fn manage_edit(_data: &Screenshot) -> impl Widget<Screenshot>{
                     ctx.stroke(rect, &square.color, square.thickness);
                 }
             }
-            
+
 
     })
     .controller(Drawer {
@@ -1170,6 +1172,8 @@ pub fn manage_edit(_data: &Screenshot) -> impl Widget<Screenshot>{
         first_click_pos: Point::new(0., 0.),
     })
     .center();
+
+    // image::imageops::overlay(&mut data.img.clone(), &paint, 0, 0);
 
     paint
 }

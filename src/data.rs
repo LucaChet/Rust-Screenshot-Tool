@@ -1,6 +1,6 @@
 use druid::{
     widget::{
-        Stepper, Button, Container, Either, FillStrat, Flex, Image, Painter, SizedBox, ZStack, Label, TextBox,
+        Stepper, Button, Container, Either, FillStrat, Flex, Image, Painter, SizedBox, ZStack, Label, TextBox, Align,
     },
     FontDescriptor, FontFamily, Color, Data, Env, EventCtx, ImageBuf, Lens,
     PaintCtx, Point, RenderContext, TimerToken,
@@ -8,8 +8,10 @@ use druid::{
 };
 use im::HashMap;
 use image::{ImageBuffer, Rgba, DynamicImage};
+use imageproc::*;
+
 use kurbo::{Shape, BezPath};
-use piet_common::{/*D2DTextLayout, */Text, TextLayoutBuilder};
+use piet_common::{/*D2DTextLayout, */Text, TextLayoutBuilder, d2d::Bitmap};
 use crate::controller::*;
 use arboard::Clipboard;
 use arboard::ImageData;
@@ -1164,6 +1166,8 @@ pub fn manage_edit(data: &Screenshot) -> impl Widget<Screenshot>{
                 }
             }
 
+            
+
 
     })
     .controller(Drawer {
@@ -1173,7 +1177,10 @@ pub fn manage_edit(data: &Screenshot) -> impl Widget<Screenshot>{
     })
     .center();
 
-    // image::imageops::overlay(&mut data.img.clone(), &paint, 0, 0);
+    // imageproc::drawing::(image, poly, color)
+    
+
+    // image::imageops::overlay(&mut dynamic, &paint, 0, 0);
 
     paint
 }

@@ -1,4 +1,5 @@
 
+use druid::text::ParseFormatter;
 use druid::widget::{
     Button, CrossAxisAlignment, Either, Flex, FlexParams, Label, Padding,
     Stepper, TextBox, ZStack,
@@ -278,15 +279,11 @@ pub fn modify_shortcut() -> impl Widget<Screenshot> {
    
     let textbox = 
     Either::new(|data, _: &Env| data.editing_shortcut,
-        TextBox::new()
-        .with_placeholder("Ctrl+")
-        .lens(Screenshot::new_name)
-        .controller(HotKeyController),
+        Label::new(|data: &Screenshot, _: &Env| format!("{}", data.new_name)),
         Label::new(""));
 
-    let row0 = Flex::row().with_child(Label::new("Type the key to associate with ctrl.
-Only letters or numbers are allowed.
-Type enter to update\n")).center();
+    let row0 = Flex::row().with_child(Label::new("Type the key combination to customize the shortcut
+associated with the action\n")).center();
 
     let row_alert = Flex::row().with_child(Either::new(
         |data: &Screenshot, _: &Env| data.duplicate_shortcut,
@@ -301,5 +298,7 @@ Type enter to update\n")).center();
     col.add_child(row1);
     col.add_default_spacer();
     col.add_child(row_alert);
-    col
+    col.controller(HotKeyController{prec: String::from("")})
+
+
 }

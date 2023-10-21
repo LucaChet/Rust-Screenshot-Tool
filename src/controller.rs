@@ -1,18 +1,20 @@
 use druid::{
     Selector, WindowDesc, commands, AppDelegate, Code, Command, Cursor, DelegateCtx, Env, Event, EventCtx
     ,Handled, LocalizedString, MouseButton, Point, Target, Widget, Color,
-    WindowState, CursorDesc, ImageBuf
+    WindowState, CursorDesc, ImageBuf,
 };
 use kurbo::BezPath;
 use std::time::Duration;
 
 use druid::widget::Controller;
-use druid_shell::TimerToken;
+use druid_shell::{TimerToken, keyboard_types::ShortcutMatcher};
 
 // use crate::data::write_derived_lenses::text;
 use crate::ui::*;
 use crate::data::*;
 use image::*;
+use imageproc::{*, integral_image::ArrayData};
+use screenshots::Screen;
 pub const SHORTCUT: Selector = Selector::new("shortcut_selector");
 pub struct SetScreen;
 
@@ -64,6 +66,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Enter {
         data: &mut Screenshot,
         env: &Env,
     ) {
+        // ctx.set_focus(target)
         if let Event::KeyUp(key) = event {
             if key.code == Code::Enter {
                 if data.new_name.trim() != "" {
@@ -512,7 +515,9 @@ impl AppDelegate<Screenshot> for Delegate {
 
 }
 
-pub struct HotKeyController;
+pub struct HotKeyController{
+    pub prec: String,
+}
 
 impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotKeyController {
     fn event( 
@@ -523,6 +528,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotKeyController {
         data: &mut Screenshot, 
         _env: &Env, 
     ) { 
+        ctx.request_focus();
         if let Event::KeyDown(key) = event {
 
             data.duplicate_shortcut = false;
@@ -530,44 +536,55 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotKeyController {
                 data.editing_shortcut = false;
                 ctx.window().close();
             }else{
-                if (key.code.to_string() >= "Digit0".to_string() && key.code.to_string() <= "Digit9".to_string())
-                || (key.code.to_string() >= "KeyA".to_string() && key.code.to_string() <= "KeyZ".to_string()){
+               
+                // if (key.code.to_string() >= "Digit0".to_string() && key.code.to_string() <= "Digit9".to_string())
+                // || (key.code.to_string() >= "KeyA".to_string() && key.code.to_string() <= "KeyZ".to_string()){
+                    // data.new_name.clear();
+                    let code = key.key.clone().to_string();
                     
-                    let code = key.code.to_string().chars().last().unwrap().to_string().to_lowercase();
-                    data.new_name = "".to_string();
-
-                    for val in data.shortcut.values(){
-                        if code == *val{
-                            data.duplicate_shortcut = true;
+                    
+                    // let code = key.code.to_string().chars().last().unwrap().to_string().to_lowercase();
+                    if code != self.prec{
+                        if self.prec != "".to_string(){
+                            data.new_name.push_str(" + ");
                         }
+                        data.new_name.push_str(code.as_str());
+                        self.prec = code.clone();
                     }
+                    
 
-                    if !data.duplicate_shortcut{
-                        match data.selected_shortcut{
-                            Shortcut::Save => {
-                                data.shortcut.entry(Shortcut::Save).and_modify(|el| *el = code);
-                            }
-                            Shortcut::Open => {
-                                data.shortcut.entry(Shortcut::Open).and_modify(|el| *el = code);
-                            }
-                            Shortcut::SaveAs => {
-                                data.shortcut.entry(Shortcut::SaveAs).and_modify(|el| *el = code);
-                            }
-                            Shortcut::Quit => {
-                                data.shortcut.entry(Shortcut::Quit).and_modify(|el| *el = code);
-                            }
-                            Shortcut::Customize => {
-                                data.shortcut.entry(Shortcut::Customize).and_modify(|el| *el = code);
-                            }
-                            Shortcut::Screenshot => {
-                                data.shortcut.entry(Shortcut::Screenshot).and_modify(|el| *el = code);
-                            }
-                            Shortcut::Capture => {
-                                data.shortcut.entry(Shortcut::Capture).and_modify(|el| *el = code);
-                            }
-                        }
-                    }
-                }
+                    // for val in data.shortcut.values(){
+                    //     if code == *val{
+                    //         data.duplicate_shortcut = true;
+                    //     }
+                    // }
+
+                //     if !data.duplicate_shortcut{
+                //         match data.selected_shortcut{
+                //             Shortcut::Save => {
+                //                 data.shortcut.entry(Shortcut::Save).and_modify(|el| *el = code);
+                //             }
+                //             Shortcut::Open => {
+                //                 data.shortcut.entry(Shortcut::Open).and_modify(|el| *el = code);
+                //             }
+                //             Shortcut::SaveAs => {
+                //                 data.shortcut.entry(Shortcut::SaveAs).and_modify(|el| *el = code);
+                //             }
+                //             Shortcut::Quit => {
+                //                 data.shortcut.entry(Shortcut::Quit).and_modify(|el| *el = code);
+                //             }
+                //             Shortcut::Customize => {
+                //                 data.shortcut.entry(Shortcut::Customize).and_modify(|el| *el = code);
+                //             }
+                //             Shortcut::Screenshot => {
+                //                 data.shortcut.entry(Shortcut::Screenshot).and_modify(|el| *el = code);
+                //             }
+                //             Shortcut::Capture => {
+                //                 data.shortcut.entry(Shortcut::Capture).and_modify(|el| *el = code);
+                //             }
+                //         }
+                //     // }
+                // }
             }
         }
         child.event(ctx, event, data, _env); 
@@ -588,7 +605,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
         _env: &Env, 
     ) { 
         let mut code = "".to_string();
-        ctx.request_focus();
+        // ctx.request_focus();
 
         if let Event::KeyDown(key) = event {
             if key.code == Code::ControlLeft{
@@ -637,7 +654,6 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
         data: &mut Screenshot, 
         _env: &Env, 
     ) { 
-        // ctx.request_focus();
         if data.edit_tool == EditTool::Pencil || data.edit_tool == EditTool::Highlighter{
             // ctx.set_cursor(&Cursor::Arrow);
             match event {
@@ -691,12 +707,30 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
                     self.flag_drawing = false;
                     ctx.set_cursor(&Cursor::Arrow);
 
+                    let screens = Screen::all().unwrap();
+                    let w_screen = screens[0].display_info.width; 
+                    let h_screen = screens[0].display_info.height;
+                    let image = screens[0]
+                        .capture_area(
+                           ((w_screen as f64 - data.resized_area.width * data.area.scale)/2.)  as i32,
+                            85  as i32,
+                            (1000. * data.area.scale)  as u32,
+                            (562.5 * data.area.scale) as u32,
+                        )
+                        .unwrap();
+
+                    data.img =  ImageBuf::from_raw(
+                        image.clone().into_raw(),
+                        druid::piet::ImageFormat::RgbaPremul,
+                        image.clone().width() as usize,
+                        image.clone().height() as usize,
+                    );
+
                 },
                 _ => ()
             }
         }
         else if data.edit_tool == EditTool::Text{
-            // ctx.request_focus();
             match event{
                 Event::MouseDown(mouse_event) => {
                     self.flag_writing = true;
@@ -841,6 +875,41 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
                     }
                     Event::MouseUp(_mouse_event) => {
                         ctx.set_active(false);
+
+
+                        // let mut image1 = ImageBuffer::default();
+                        // let col = RgbaArea{r: data.squares.0[data.squares.1].color.as_rgba8().0 as f64, g: data.squares.0[data.squares.1].color.as_rgba8().1 as f64, b: data.squares.0[data.squares.1].color.as_rgba8().2 as f64, a: data.squares.0[data.squares.1].color.as_rgba8().3 as f64};
+                        // let col2 : Rgba<u8> = Rgba([col.r as u8, col.g as u8, col.b as u8, col.a as u8]);
+                        // let w = (data.squares.0[data.squares.1].end.x - data.squares.0[data.squares.1].start.x).abs();
+                        // let h = (data.squares.0[data.squares.1].end.y - data.squares.0[data.squares.1].start.y).abs();
+    
+                        // // image1 = drawing::draw_hollow_ellipse(&image1, (rect.center().x as i32, rect.center().y as i32), rect.width() as i32, rect.height() as i32, col2);
+                        // if w>0. && h>0.{
+                        //     let rect2 = imageproc::rect::Rect::at(data.squares.0[data.squares.1].start.x as i32, data.squares.0[data.squares.1].start.y as i32).of_size(w as u32, h as u32);
+                        //     image1 = drawing::draw_hollow_rect(&image1, rect2, col2);
+                            
+                        //     image1
+                        //     .save_with_format(
+                        //         format!(
+                        //             "{}/{}{}",
+                        //             data.default_save_path.clone(),
+                        //             data.name,
+                        //             data.format.to_string()
+                        //         ),
+                        //         image::ImageFormat::Png,
+                        //     )
+                        //     .expect("Errore nel salvataggio automatico!");
+                        // }
+
+                        
+                        
+                        // data.squares.0[data.squares.1].image = ImageBuf::from_raw(
+                        //     image1.clone().into_raw(),
+                        //     druid::piet::ImageFormat::RgbaPremul,
+                        //     image1.clone().width() as usize,
+                        //     image1.clone().height() as usize,
+                        // );
+
                         data.squares.0.push_back(Square::new());
                         data.squares.1 += 1;
                     }

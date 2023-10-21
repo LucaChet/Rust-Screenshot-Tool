@@ -235,6 +235,7 @@ pub struct Screenshot {
     pub flag_resize: bool,
     pub resized_area: ResizedArea,
     pub shortcut: HashMap<Shortcut, String>,
+    pub prec_hotkey: String,
     pub selected_shortcut: Shortcut,
     pub editing_shortcut: bool,
     pub duplicate_shortcut: bool,
@@ -261,13 +262,13 @@ pub struct Screenshot {
 impl Screenshot {
     pub fn new(name: String, format: Format, newname: String) -> Self {
         let mut shortcut = HashMap::new();
-        shortcut.insert(Shortcut::Save, String::from("s"));
-        shortcut.insert(Shortcut::SaveAs, String::from("a"));
-        shortcut.insert(Shortcut::Open, String::from("o"));
-        shortcut.insert(Shortcut::Customize, String::from("k"));
-        shortcut.insert(Shortcut::Screenshot, String::from("t"));
-        shortcut.insert(Shortcut::Capture, String::from("y"));
-        shortcut.insert(Shortcut::Quit, String::from("q"));
+        shortcut.insert(Shortcut::Save, String::from("Control+s"));
+        shortcut.insert(Shortcut::SaveAs, String::from("Control+a"));
+        shortcut.insert(Shortcut::Open, String::from("Control+o"));
+        shortcut.insert(Shortcut::Customize, String::from("Control+k"));
+        shortcut.insert(Shortcut::Screenshot, String::from("Control+t"));
+        shortcut.insert(Shortcut::Capture, String::from("Control+y"));
+        shortcut.insert(Shortcut::Quit, String::from("Control+q"));
 
         let mut points = im::Vector::new();
         points.push_back((im::Vector::new(), Color::WHITE, 1., 1.));
@@ -305,7 +306,8 @@ impl Screenshot {
             flag_resize: false,
             resized_area: ResizedArea::new(),
             shortcut,
-            selected_shortcut: Shortcut::Save,
+            prec_hotkey: String::from(""),
+            selected_shortcut: Shortcut::Screenshot,
             editing_shortcut: true,
             duplicate_shortcut: false,
             monitor_id: 0,

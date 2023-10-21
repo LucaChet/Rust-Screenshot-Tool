@@ -1,13 +1,13 @@
 use druid::{
-    Selector, WindowDesc, commands, AppDelegate, Code, Command, Cursor, DelegateCtx, Env, Event, EventCtx
+    FileDialogOptions, Selector, WindowDesc, commands, AppDelegate, Code, Command, Cursor, DelegateCtx, Env, Event, EventCtx
     ,Handled, LocalizedString, MouseButton, Point, Target, Widget, Color,
-    WindowState, CursorDesc, ImageBuf,
+    WindowState, CursorDesc, ImageBuf, FileSpec
 };
 use kurbo::BezPath;
 use std::time::Duration;
 
 use druid::widget::Controller;
-use druid_shell::{TimerToken, keyboard_types::ShortcutMatcher};
+use druid_shell::{TimerToken, Application};
 
 // use crate::data::write_derived_lenses::text;
 use crate::ui::*;
@@ -515,9 +515,7 @@ impl AppDelegate<Screenshot> for Delegate {
 
 }
 
-pub struct HotKeyController{
-    pub prec: String,
-}
+pub struct HotKeyController;
 
 impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotKeyController {
     fn event( 
@@ -537,54 +535,32 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotKeyController {
                 ctx.window().close();
             }else{
                
-                // if (key.code.to_string() >= "Digit0".to_string() && key.code.to_string() <= "Digit9".to_string())
-                // || (key.code.to_string() >= "KeyA".to_string() && key.code.to_string() <= "KeyZ".to_string()){
-                    // data.new_name.clear();
                     let code = key.key.clone().to_string();
                     
-                    
-                    // let code = key.code.to_string().chars().last().unwrap().to_string().to_lowercase();
-                    if code != self.prec{
-                        if self.prec != "".to_string(){
-                            data.new_name.push_str(" + ");
+                    if code != data.prec_hotkey{
+                        if data.prec_hotkey != "".to_string(){
+                            data.new_name.push_str("+");
                         }
                         data.new_name.push_str(code.as_str());
-                        self.prec = code.clone();
+                        data.prec_hotkey = code.clone();
                     }
-                    
 
-                    // for val in data.shortcut.values(){
-                    //     if code == *val{
-                    //         data.duplicate_shortcut = true;
-                    //     }
-                    // }
+                    let shortcut: Vec<&str> = data.new_name.split("+").collect();
 
-                //     if !data.duplicate_shortcut{
-                //         match data.selected_shortcut{
-                //             Shortcut::Save => {
-                //                 data.shortcut.entry(Shortcut::Save).and_modify(|el| *el = code);
-                //             }
-                //             Shortcut::Open => {
-                //                 data.shortcut.entry(Shortcut::Open).and_modify(|el| *el = code);
-                //             }
-                //             Shortcut::SaveAs => {
-                //                 data.shortcut.entry(Shortcut::SaveAs).and_modify(|el| *el = code);
-                //             }
-                //             Shortcut::Quit => {
-                //                 data.shortcut.entry(Shortcut::Quit).and_modify(|el| *el = code);
-                //             }
-                //             Shortcut::Customize => {
-                //                 data.shortcut.entry(Shortcut::Customize).and_modify(|el| *el = code);
-                //             }
-                //             Shortcut::Screenshot => {
-                //                 data.shortcut.entry(Shortcut::Screenshot).and_modify(|el| *el = code);
-                //             }
-                //             Shortcut::Capture => {
-                //                 data.shortcut.entry(Shortcut::Capture).and_modify(|el| *el = code);
-                //             }
-                //         }
-                //     // }
-                // }
+                    let save: Vec<&str> = data.shortcut.get(&Shortcut::Save).unwrap().split("+").collect();
+                    let save_as: Vec<&str> = data.shortcut.get(&Shortcut::SaveAs).unwrap().split("+").collect();
+                    let open: Vec<&str> = data.shortcut.get(&Shortcut::Open).unwrap().split("+").collect();
+                    let customize: Vec<&str> = data.shortcut.get(&Shortcut::Customize).unwrap().split("+").collect();
+                    let quit: Vec<&str> = data.shortcut.get(&Shortcut::Quit).unwrap().split("+").collect();
+                    let screenshot: Vec<&str> = data.shortcut.get(&Shortcut::Screenshot).unwrap().split("+").collect();
+                    let capture: Vec<&str> = data.shortcut.get(&Shortcut::Capture).unwrap().split("+").collect();
+        
+                    if shortcut == save || shortcut == save_as || shortcut == open || shortcut == quit || shortcut == customize ||
+                        shortcut == screenshot || shortcut == capture{
+                        data.duplicate_shortcut = true;
+                        data.prec_hotkey="".to_string();
+                        data.new_name="".to_string();
+                    }
             }
         }
         child.event(ctx, event, data, _env); 
@@ -592,7 +568,8 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotKeyController {
 }
 
 pub struct HotkeyScreen{
-    pub flag_ctrl: bool,
+    pub prec: String,
+    pub code: String,
 }
 
 impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
@@ -604,35 +581,89 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
         data: &mut Screenshot, 
         _env: &Env, 
     ) { 
-        let mut code = "".to_string();
-        // ctx.request_focus();
+        ctx.request_focus();
 
         if let Event::KeyDown(key) = event {
-            if key.code == Code::ControlLeft{
-                self.flag_ctrl = true;
+            self.code = key.key.clone().to_string();       
+            if self.code != self.prec{
+                if self.prec != "".to_string(){
+                    data.new_name.push_str("+");
+                }
+                data.new_name.push_str(self.code.as_str());
+                self.prec = self.code.clone();
             }
+            let shortcut: Vec<&str> = data.new_name.split("+").collect();
+
+            let save: Vec<&str> = data.shortcut.get(&Shortcut::Save).unwrap().split("+").collect();
+            let save_as: Vec<&str> = data.shortcut.get(&Shortcut::SaveAs).unwrap().split("+").collect();
+            let open: Vec<&str> = data.shortcut.get(&Shortcut::Open).unwrap().split("+").collect();
+            let customize: Vec<&str> = data.shortcut.get(&Shortcut::Customize).unwrap().split("+").collect();
+            let quit: Vec<&str> = data.shortcut.get(&Shortcut::Quit).unwrap().split("+").collect();
+            let screenshot: Vec<&str> = data.shortcut.get(&Shortcut::Screenshot).unwrap().split("+").collect();
+            let capture: Vec<&str> = data.shortcut.get(&Shortcut::Capture).unwrap().split("+").collect();
+
+            if shortcut == screenshot{
+                data.action_screen(ctx)
+            }else if shortcut == capture{
+                data.action_capture(ctx)
+            }else if shortcut == save{
+                let image: ImageBuffer<image::Rgba<u8>, Vec<u8>> = ImageBuffer::from_vec(
+                    data.img.width() as u32,
+                    data.img.height() as u32,
+                    data.img.raw_pixels().to_vec(),
+                )
+                .unwrap();
+    
+                image
+                    .save_with_format(
+                        format!(
+                            "{}/{}{}",
+                            data.default_save_path.clone(),
+                            data.name,
+                            data.format.to_string()
+                        ),
+                        image::ImageFormat::Png,
+                    )
+                    .expect("Errore nel salvataggio automatico!");
+            }else if shortcut == save_as{
+                let formats = vec![
+                    FileSpec::new("jpg", &["jpg"]),
+                    FileSpec::new("png", &["png"]),
+                    FileSpec::new("gif", &["gif"]),
+                    FileSpec::new("pnm", &["pnm"]),
+                    FileSpec::new("tga", &["tga"]),
+                    FileSpec::new("qoi", &["qoi"]),
+                    FileSpec::new("tiff", &["tiff"]),
+                    FileSpec::new("webp", &["webp"]),
+                    FileSpec::new("bmp", &["bmp"]),
+                ];
+    
+                let default_name = format!("{}{}", data.name, data.format.to_string());
+                let save_dialog_options = FileDialogOptions::new()
+                    .allowed_types(formats)
+                    .default_type(FileSpec::new("png", &["png"]))
+                    .default_name(default_name);
+                
+                ctx.submit_command(druid::commands::SHOW_SAVE_PANEL.with(save_dialog_options.clone()))
+            }else if shortcut == open{
+                let open_dialog_options: FileDialogOptions = FileDialogOptions::new()
+                .select_directories()
+                .button_text("Open");
+                ctx.submit_command(druid::commands::SHOW_OPEN_PANEL.with(open_dialog_options.clone()))
+            }else if shortcut == quit{
+                Application::global().quit();
+            }else if shortcut == customize{
+                data.editing_shortcut = true;
+                data.new_name = "".to_string();
+                ctx.submit_command(SHORTCUT) 
+            }
+                
+            
         }
 
-        if let Event::KeyUp(key) = event {
-            if key.code == Code::ControlLeft{
-                self.flag_ctrl = false;
-            }
-        }
-
-        if let Event::KeyDown(key) = event{
-            let screen = data.shortcut.get(&Shortcut::Screenshot).unwrap().as_str();
-            let capture = data.shortcut.get(&Shortcut::Capture).unwrap().as_str();
-
-            if (key.code.to_string() >= "Digit0".to_string() && key.code.to_string() <= "Digit9".to_string())
-            || (key.code.to_string() >= "KeyA".to_string() && key.code.to_string() <= "KeyZ".to_string()){
-                code = key.code.to_string().chars().last().unwrap().to_string().to_lowercase();
-            }
-
-            if code == screen && self.flag_ctrl{
-                data.action_screen(ctx);
-            }else if code == capture && self.flag_ctrl{
-                data.action_capture(ctx);
-            }
+        if let Event::KeyUp(_key) = event {
+            data.new_name.clear();
+            self.prec.clear();
         }
 
         child.event(ctx, event, data, _env);

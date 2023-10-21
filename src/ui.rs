@@ -1,5 +1,4 @@
 
-use druid::text::ParseFormatter;
 use druid::widget::{
     Button, CrossAxisAlignment, Either, Flex, FlexParams, Label, Padding,
     Stepper, TextBox, ZStack,
@@ -24,14 +23,14 @@ use crate::data::*;
 pub fn ui_builder() -> impl Widget<Screenshot> {
     let mut col = Flex::column().with_child(
         Flex::row()
-            .with_child(Button::new(|data: &Screenshot, _:&Env| format!("📷  (Ctrl+{})", data.shortcut.get(&Shortcut::Screenshot).unwrap().to_uppercase().as_str()))
+            .with_child(Button::new(|data: &Screenshot, _:&Env| format!("📷  ({})", data.shortcut.get(&Shortcut::Screenshot).unwrap().to_uppercase().as_str()))
             .stack_tooltip("Screen")
             .on_click(
                 |ctx, data: &mut Screenshot, _env| {
                     data.action_screen(ctx);
                 },
             ))
-            .with_child(Button::new(|data: &Screenshot, _:&Env| format!("🖱️  (Ctrl+{})", data.shortcut.get(&Shortcut::Capture).unwrap().to_uppercase().as_str()))
+            .with_child(Button::new(|data: &Screenshot, _:&Env| format!("🖱️  ({})", data.shortcut.get(&Shortcut::Capture).unwrap().to_uppercase().as_str()))
             .stack_tooltip("Capture Area")
             .on_click(
                 |ctx: &mut EventCtx, data: &mut Screenshot, _env| {
@@ -92,7 +91,7 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
             }
         }),
     );
-
+    
     row.add_child(screen_name);
     row.add_child(button_modifica);
     row.add_child(gestisci_screen);
@@ -103,7 +102,7 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
 
     ZStack::new(col.with_flex_child(row, FlexParams::new(1.0, CrossAxisAlignment::Start)))
         .with_aligned_child(Padding::new(5., row_timer), UnitPoint::BOTTOM_RIGHT)
-        .controller(HotkeyScreen {flag_ctrl: false})
+        .controller(HotkeyScreen {code: String::from(""), prec: String::from("")})
 
 }
 
@@ -122,7 +121,7 @@ pub fn menu(_: Option<WindowId>, _state: &Screenshot, _: &Env) -> Menu<Screensho
 
                 ctx.submit_command(druid::commands::SHOW_OPEN_PANEL.with(open_dialog_options.clone()))
             }
-        ).dynamic_hotkey(|data, _env| Some(HotKey::new(SysMods::Cmd, data.shortcut.get(&Shortcut::Open).unwrap().as_str())))
+        ).dynamic_hotkey(|data, _env| Some(HotKey::new(SysMods::None, data.shortcut.get(&Shortcut::Open).unwrap().as_str())))
     )
     .entry(
         MenuItem::new(LocalizedString::new("Save..")).on_activate(
@@ -147,7 +146,7 @@ pub fn menu(_: Option<WindowId>, _state: &Screenshot, _: &Env) -> Menu<Screensho
                     .expect("Errore nel salvataggio automatico!");
             }
         ).enabled_if(|data: &Screenshot, _: &Env| data.name != "")
-        .dynamic_hotkey(|data, _env| Some(HotKey::new(SysMods::Cmd, data.shortcut.get(&Shortcut::Save).unwrap().as_str())))
+        .dynamic_hotkey(|data, _env| Some(HotKey::new(SysMods::None, data.shortcut.get(&Shortcut::Save).unwrap().as_str())))
     )
     .entry(
         MenuItem::new(LocalizedString::new("Save as..")).on_activate(
@@ -173,7 +172,7 @@ pub fn menu(_: Option<WindowId>, _state: &Screenshot, _: &Env) -> Menu<Screensho
                 ctx.submit_command(druid::commands::SHOW_SAVE_PANEL.with(save_dialog_options.clone()))
             }
         ).enabled_if(|data: &Screenshot, _: &Env| data.name != "")
-        .dynamic_hotkey(|data, _env| Some(HotKey::new(SysMods::Cmd, data.shortcut.get(&Shortcut::SaveAs).unwrap().as_str())))
+        .dynamic_hotkey(|data, _env| Some(HotKey::new(SysMods::None, data.shortcut.get(&Shortcut::SaveAs).unwrap().as_str())))
     )
     .entry(MenuItem::new(LocalizedString::new("Customize shortcut..")).on_activate(
         |ctx, data: &mut Screenshot, _env|{
@@ -181,14 +180,14 @@ pub fn menu(_: Option<WindowId>, _state: &Screenshot, _: &Env) -> Menu<Screensho
             data.new_name = "".to_string();
             ctx.submit_command(SHORTCUT)   
         }
-    ).dynamic_hotkey(|data, _env| Some(HotKey::new(SysMods::Cmd, data.shortcut.get(&Shortcut::Customize).unwrap().as_str())))
+    ).dynamic_hotkey(|data, _env| Some(HotKey::new(SysMods::None, data.shortcut.get(&Shortcut::Customize).unwrap().as_str())))
 ).separator()
     .entry(
         MenuItem::new(LocalizedString::new("Quit")).on_activate(
             |_ctx, _data: &mut Screenshot, _env|{
                 Application::global().quit();
             })
-            .dynamic_hotkey(|data, _env| Some(HotKey::new(SysMods::Cmd, data.shortcut.get(&Shortcut::Quit).unwrap().as_str())))
+            .dynamic_hotkey(|data, _env| Some(HotKey::new(SysMods::None, data.shortcut.get(&Shortcut::Quit).unwrap().as_str())))
     );
 
     let mut format = Menu::new(LocalizedString::new("Format"));
@@ -277,13 +276,61 @@ pub fn modify_shortcut() -> impl Widget<Screenshot> {
 
     let mut col = Flex::column();
    
-    let textbox = 
+    let shortcut = 
     Either::new(|data, _: &Env| data.editing_shortcut,
         Label::new(|data: &Screenshot, _: &Env| format!("{}", data.new_name)),
         Label::new(""));
 
+    let save = Either::new(|data, _: &Env| data.new_name == "".to_string(),
+        Label::new(""),
+        Button::new("Save").on_click(|_ctx, data: &mut Screenshot, _env|{
+            if !data.duplicate_shortcut{
+                match data.selected_shortcut{
+                    Shortcut::Save => {
+                        data.shortcut.entry(Shortcut::Save).and_modify(|el| *el = data.new_name.clone());
+                    }
+                    Shortcut::Open => {
+                        data.shortcut.entry(Shortcut::Open).and_modify(|el| *el = data.new_name.clone());
+                    }
+                    Shortcut::SaveAs => {
+                        data.shortcut.entry(Shortcut::SaveAs).and_modify(|el| *el = data.new_name.clone());
+                    }
+                    Shortcut::Quit => {
+                        data.shortcut.entry(Shortcut::Quit).and_modify(|el| *el = data.new_name.clone());
+                    }
+                    Shortcut::Customize => {
+                        data.shortcut.entry(Shortcut::Customize).and_modify(|el| *el = data.new_name.clone());
+                    }
+                    Shortcut::Screenshot => {
+                        data.shortcut.entry(Shortcut::Screenshot).and_modify(|el| *el = data.new_name.clone());
+                    }
+                    Shortcut::Capture => {
+                        data.shortcut.entry(Shortcut::Capture).and_modify(|el| *el = data.new_name.clone());
+                    }
+                }
+            }
+    
+            data.new_name.clear();
+            data.prec_hotkey="".to_string();
+        }).background(Color::GREEN)
+    );
+
+    let cancel = Either::new(|data, _: &Env| data.new_name == "".to_string(),
+    Label::new(""),
+    Button::new("Cancel").on_click(|_ctx, data: &mut Screenshot, _env|{
+        data.new_name.clear();
+        data.prec_hotkey="".to_string();
+    }).background(Color::RED)
+);
+    
+
     let row0 = Flex::row().with_child(Label::new("Type the key combination to customize the shortcut
 associated with the action\n")).center();
+
+    let mut row_save = Flex::row();
+    row_save.add_child(save);
+    row_save.add_default_spacer();
+    row_save.add_child(cancel);
 
     let row_alert = Flex::row().with_child(Either::new(
         |data: &Screenshot, _: &Env| data.duplicate_shortcut,
@@ -293,12 +340,14 @@ associated with the action\n")).center();
 
     let mut row1 = Flex::row();
     row1.add_child(dropdown);
-    row1.add_child(textbox);
+    row1.add_child(shortcut);
+    
     col.add_child(row0);
     col.add_child(row1);
     col.add_default_spacer();
+    col.add_child(row_save);
+    col.add_default_spacer();
     col.add_child(row_alert);
-    col.controller(HotKeyController{prec: String::from("")})
-
+    col.controller(HotKeyController)
 
 }

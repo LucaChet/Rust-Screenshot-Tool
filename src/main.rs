@@ -22,7 +22,7 @@ fn main() {
         .window_size((900., 450.));
 
     
-    let todo_state = Screenshot::new("".to_string(), Format::Png, "".to_string());
+    let todo_state = Screenshot::new("".to_string(), Format::Png);
 
     //apre effettivamente finestra con le proprietà definite
     AppLauncher::with_window(main_window)

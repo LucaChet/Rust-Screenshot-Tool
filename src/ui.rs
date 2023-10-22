@@ -55,16 +55,7 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
 
     let mut row = Flex::row();
 
-    let button_modifica = Either::new(
-        |data: &Screenshot, _: &Env| data.screen_fatto,
-        Button::new("Modifica nome").on_click(|ctx: &mut EventCtx, data: &mut Screenshot, _env| {
-            data.name = data.new_name.clone();
-            data.new_name = "".to_string();
-            Screenshot::toggle_textbox_state(data);
-            ctx.request_update();
-        }),
-        Label::new(""),
-    );
+
 
     let gestisci_screen = Either::new(
         |data: &Screenshot, _: &Env| data.screen_fatto,
@@ -90,6 +81,23 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
                 format!("{}{}", data.name, data.format.to_string())
             }
         }),
+    );
+
+
+    let button_modifica = Either::new(
+        |data: &Screenshot, _: &Env| data.screen_fatto,
+        Button::new("Modifica nome").on_click(|ctx: &mut EventCtx, data: &mut Screenshot, _env| {
+            if data.flag_focus{
+                data.flag_focus = false;
+            }else{
+                data.flag_focus = true;
+            }
+            data.name = data.new_name.clone();
+            data.new_name = "".to_string();
+            Screenshot::toggle_textbox_state(data);
+            ctx.request_update();
+        }),
+        Label::new(""),
     );
     
     row.add_child(screen_name);
@@ -177,7 +185,7 @@ pub fn menu(_: Option<WindowId>, _state: &Screenshot, _: &Env) -> Menu<Screensho
     .entry(MenuItem::new(LocalizedString::new("Customize shortcut..")).on_activate(
         |ctx, data: &mut Screenshot, _env|{
             data.editing_shortcut = true;
-            data.new_name = "".to_string();
+            data.new_shortcut = "".to_string();
             ctx.submit_command(SHORTCUT)   
         }
     ).dynamic_hotkey(|data, _env| Some(HotKey::new(SysMods::None, data.shortcut.get(&Shortcut::Customize).unwrap().as_str())))
@@ -262,6 +270,7 @@ pub fn menu(_: Option<WindowId>, _state: &Screenshot, _: &Env) -> Menu<Screensho
 }
 
 pub fn modify_shortcut() -> impl Widget<Screenshot> {
+
     let dropdown = DropdownSelect::new(vec![
         ("Save", Shortcut::Save),
         ("Save as", Shortcut::SaveAs),
@@ -278,47 +287,48 @@ pub fn modify_shortcut() -> impl Widget<Screenshot> {
    
     let shortcut = 
     Either::new(|data, _: &Env| data.editing_shortcut,
-        Label::new(|data: &Screenshot, _: &Env| format!("{}", data.new_name)),
+        Label::new(|data: &Screenshot, _: &Env| format!("{}", data.new_shortcut)),
         Label::new(""));
 
-    let save = Either::new(|data, _: &Env| data.new_name == "".to_string(),
+    let save = Either::new(|data, _: &Env| data.new_shortcut == "".to_string(),
         Label::new(""),
         Button::new("Save").on_click(|_ctx, data: &mut Screenshot, _env|{
             if !data.duplicate_shortcut{
                 match data.selected_shortcut{
                     Shortcut::Save => {
-                        data.shortcut.entry(Shortcut::Save).and_modify(|el| *el = data.new_name.clone());
+                        data.shortcut.entry(Shortcut::Save).and_modify(|el| *el = data.new_shortcut.clone());
                     }
                     Shortcut::Open => {
-                        data.shortcut.entry(Shortcut::Open).and_modify(|el| *el = data.new_name.clone());
+                        data.shortcut.entry(Shortcut::Open).and_modify(|el| *el = data.new_shortcut.clone());
                     }
                     Shortcut::SaveAs => {
-                        data.shortcut.entry(Shortcut::SaveAs).and_modify(|el| *el = data.new_name.clone());
+                        data.shortcut.entry(Shortcut::SaveAs).and_modify(|el| *el = data.new_shortcut.clone());
                     }
                     Shortcut::Quit => {
-                        data.shortcut.entry(Shortcut::Quit).and_modify(|el| *el = data.new_name.clone());
+                        data.shortcut.entry(Shortcut::Quit).and_modify(|el| *el = data.new_shortcut.clone());
                     }
                     Shortcut::Customize => {
-                        data.shortcut.entry(Shortcut::Customize).and_modify(|el| *el = data.new_name.clone());
+                        data.shortcut.entry(Shortcut::Customize).and_modify(|el| *el = data.new_shortcut.clone());
                     }
                     Shortcut::Screenshot => {
-                        data.shortcut.entry(Shortcut::Screenshot).and_modify(|el| *el = data.new_name.clone());
+                        data.shortcut.entry(Shortcut::Screenshot).and_modify(|el| *el = data.new_shortcut.clone());
                     }
                     Shortcut::Capture => {
-                        data.shortcut.entry(Shortcut::Capture).and_modify(|el| *el = data.new_name.clone());
+                        data.shortcut.entry(Shortcut::Capture).and_modify(|el| *el = data.new_shortcut.clone());
                     }
                 }
             }
     
-            data.new_name.clear();
+            data.new_shortcut.clear();
             data.prec_hotkey="".to_string();
+            data.saved_shortcut = true;
         }).background(Color::GREEN)
     );
 
-    let cancel = Either::new(|data, _: &Env| data.new_name == "".to_string(),
+    let cancel = Either::new(|data, _: &Env| data.new_shortcut == "".to_string(),
     Label::new(""),
     Button::new("Cancel").on_click(|_ctx, data: &mut Screenshot, _env|{
-        data.new_name.clear();
+        data.new_shortcut.clear();
         data.prec_hotkey="".to_string();
     }).background(Color::RED)
 );
@@ -333,8 +343,8 @@ associated with the action\n")).center();
     row_save.add_child(cancel);
 
     let row_alert = Flex::row().with_child(Either::new(
-        |data: &Screenshot, _: &Env| data.duplicate_shortcut,
-        Label::new("⚠️ALREADY EXISTS!⚠️").border(Color::RED, 2.).background(Color::GRAY).center(),
+        |data: &Screenshot, _: &Env| data.duplicate_shortcut && data.saved_shortcut,
+        Label::new("⚠️CONFLICTS WITH EXISTING SHORTCUT!⚠️").border(Color::RED, 2.).background(Color::BLACK).center(),
         Label::new(""),
     ));
 

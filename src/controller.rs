@@ -66,13 +66,15 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Enter {
         data: &mut Screenshot,
         env: &Env,
     ) {
-        // ctx.set_focus(target)
+        // ctx.request_focus();
+        
         if let Event::KeyUp(key) = event {
             if key.code == Code::Enter {
                 if data.new_name.trim() != "" {
                     data.name = data.new_name.clone();
                     data.new_name = "".to_string();
                     Screenshot::toggle_textbox_state(data);
+                    data.flag_focus = true;
                 }
             }
         }
@@ -118,7 +120,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
     ) {
         if data.full_screen == false {
             let mut current = ctx.window().clone();
-            
+
             if data.time_interval > 0.0 && self.flag && !data.flag_desk2{ //flag_desk2 serve per il secondo monitor, scatta dopo tot secondi e al secondo giro entra nell'else if
                 self.t1 = ctx.request_timer(Duration::from_secs(data.time_interval as u64));
                 self.flag = false;
@@ -415,14 +417,14 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ResizeController {
                             }
                         }
                         ResizeInteraction::Upper => {
-                            if data.resized_area.y + deltay >= self.original_area.y && 
+                            if data.resized_area.y + deltay >= self.original_area.y &&
                             data.resized_area.y + deltay <= data.resized_area.y + data.resized_area.height - 10.{
                                 data.resized_area.y += deltay;
                                 data.resized_area.height -= deltay
                             }
                         }
                         ResizeInteraction::Left => {
-                            if data.resized_area.x + deltax >= self.original_area.x && 
+                            if data.resized_area.x + deltax >= self.original_area.x &&
                             data.resized_area.x + deltax <= data.resized_area.x + data.resized_area.width - 10.{
                                 data.resized_area.x += deltax;
                                 data.resized_area.width -= deltax;
@@ -477,7 +479,7 @@ impl AppDelegate<Screenshot> for Delegate {
         data: &mut Screenshot,
         _env: &Env,
     ) -> Handled {
-        
+
         if let Some(file_info) = cmd.get(commands::SAVE_FILE_AS) {
             let color_type = ColorType::Rgba8;
             let file = std::fs::File::create(file_info.path()).unwrap();
@@ -518,53 +520,59 @@ impl AppDelegate<Screenshot> for Delegate {
 pub struct HotKeyController;
 
 impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotKeyController {
-    fn event( 
-        &mut self, 
-        child: &mut W, 
-        ctx: &mut EventCtx, 
-        event: &Event, 
-        data: &mut Screenshot, 
-        _env: &Env, 
-    ) { 
+    fn event(
+        &mut self,
+        child: &mut W,
+        ctx: &mut EventCtx,
+        event: &Event,
+        data: &mut Screenshot,
+        _env: &Env,
+    ) {
         ctx.request_focus();
         if let Event::KeyDown(key) = event {
 
             data.duplicate_shortcut = false;
-            if key.code == Code::Enter{
-                data.editing_shortcut = false;
-                ctx.window().close();
-            }else{
-               
-                    let code = key.key.clone().to_string();
-                    
-                    if code != data.prec_hotkey{
-                        if data.prec_hotkey != "".to_string(){
-                            data.new_name.push_str("+");
-                        }
-                        data.new_name.push_str(code.as_str());
-                        data.prec_hotkey = code.clone();
-                    }
+            data.saved_shortcut = false;
 
-                    let shortcut: Vec<&str> = data.new_name.split("+").collect();
+            let code = key.key.clone().to_string();
 
-                    let save: Vec<&str> = data.shortcut.get(&Shortcut::Save).unwrap().split("+").collect();
-                    let save_as: Vec<&str> = data.shortcut.get(&Shortcut::SaveAs).unwrap().split("+").collect();
-                    let open: Vec<&str> = data.shortcut.get(&Shortcut::Open).unwrap().split("+").collect();
-                    let customize: Vec<&str> = data.shortcut.get(&Shortcut::Customize).unwrap().split("+").collect();
-                    let quit: Vec<&str> = data.shortcut.get(&Shortcut::Quit).unwrap().split("+").collect();
-                    let screenshot: Vec<&str> = data.shortcut.get(&Shortcut::Screenshot).unwrap().split("+").collect();
-                    let capture: Vec<&str> = data.shortcut.get(&Shortcut::Capture).unwrap().split("+").collect();
-        
-                    if shortcut == save || shortcut == save_as || shortcut == open || shortcut == quit || shortcut == customize ||
-                        shortcut == screenshot || shortcut == capture{
-                        data.duplicate_shortcut = true;
-                        data.prec_hotkey="".to_string();
-                        data.new_name="".to_string();
-                    }
+            if code != data.prec_hotkey{
+                if data.prec_hotkey != "".to_string(){
+                    data.new_shortcut.push_str("+");
+                }
+                data.new_shortcut.push_str(code.as_str());
+                data.prec_hotkey = code.clone();
             }
+
+            let shortcut: Vec<&str> = data.new_shortcut.split("+").collect();
+
+            let save: Vec<&str> = data.shortcut.get(&Shortcut::Save).unwrap().split("+").collect();
+            let save_as: Vec<&str> = data.shortcut.get(&Shortcut::SaveAs).unwrap().split("+").collect();
+            let open: Vec<&str> = data.shortcut.get(&Shortcut::Open).unwrap().split("+").collect();
+            let customize: Vec<&str> = data.shortcut.get(&Shortcut::Customize).unwrap().split("+").collect();
+            let quit: Vec<&str> = data.shortcut.get(&Shortcut::Quit).unwrap().split("+").collect();
+            let screenshot: Vec<&str> = data.shortcut.get(&Shortcut::Screenshot).unwrap().split("+").collect();
+            let capture: Vec<&str> = data.shortcut.get(&Shortcut::Capture).unwrap().split("+").collect();
+
+            if shortcut == save || shortcut == save_as || shortcut == open || shortcut == quit || shortcut == customize ||
+                shortcut == screenshot || shortcut == capture{
+                data.duplicate_shortcut = true;
+            }
+
+
+            if data.shortcut.get(&Shortcut::Save).unwrap().contains(&data.new_shortcut) || data.new_shortcut.contains(data.shortcut.get(&Shortcut::Save).unwrap()) ||
+                data.shortcut.get(&Shortcut::SaveAs).unwrap().contains(&data.new_shortcut) || data.new_shortcut.contains(data.shortcut.get(&Shortcut::SaveAs).unwrap()) ||
+                data.shortcut.get(&Shortcut::Open).unwrap().contains(&data.new_shortcut) || data.new_shortcut.contains(data.shortcut.get(&Shortcut::Open).unwrap()) ||
+                data.shortcut.get(&Shortcut::Customize).unwrap().contains(&data.new_shortcut) || data.new_shortcut.contains(data.shortcut.get(&Shortcut::Customize).unwrap()) ||
+                data.shortcut.get(&Shortcut::Quit).unwrap().contains(&data.new_shortcut) || data.new_shortcut.contains(data.shortcut.get(&Shortcut::Quit).unwrap()) ||
+                data.shortcut.get(&Shortcut::Screenshot).unwrap().contains(&data.new_shortcut) || data.new_shortcut.contains(data.shortcut.get(&Shortcut::Screenshot).unwrap()) ||
+                data.shortcut.get(&Shortcut::Capture).unwrap().contains(&data.new_shortcut) || data.new_shortcut.contains(data.shortcut.get(&Shortcut::Capture).unwrap()){
+                data.duplicate_shortcut = true;
+            }
+
         }
-        child.event(ctx, event, data, _env); 
-    } 
+        child.event(ctx, event, data, _env);
+    }
 }
 
 pub struct HotkeyScreen{
@@ -573,26 +581,27 @@ pub struct HotkeyScreen{
 }
 
 impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
-    fn event( 
-        &mut self, 
-        child: &mut W, 
-        ctx: &mut EventCtx, 
-        event: &Event, 
-        data: &mut Screenshot, 
-        _env: &Env, 
-    ) { 
-        ctx.request_focus();
-
+    fn event(
+        &mut self,
+        child: &mut W,
+        ctx: &mut EventCtx,
+        event: &Event,
+        data: &mut Screenshot,
+        _env: &Env,
+    ) {
+        if data.flag_focus{
+            ctx.request_focus();
+        }   
         if let Event::KeyDown(key) = event {
-            self.code = key.key.clone().to_string();       
+            self.code = key.key.clone().to_string();
             if self.code != self.prec{
                 if self.prec != "".to_string(){
-                    data.new_name.push_str("+");
+                    data.new_shortcut.push_str("+");
                 }
-                data.new_name.push_str(self.code.as_str());
+                data.new_shortcut.push_str(self.code.as_str());
                 self.prec = self.code.clone();
             }
-            let shortcut: Vec<&str> = data.new_name.split("+").collect();
+            let shortcut: Vec<&str> = data.new_shortcut.split("+").collect();
 
             let save: Vec<&str> = data.shortcut.get(&Shortcut::Save).unwrap().split("+").collect();
             let save_as: Vec<&str> = data.shortcut.get(&Shortcut::SaveAs).unwrap().split("+").collect();
@@ -613,7 +622,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
                     data.img.raw_pixels().to_vec(),
                 )
                 .unwrap();
-    
+
                 image
                     .save_with_format(
                         format!(
@@ -637,13 +646,13 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
                     FileSpec::new("webp", &["webp"]),
                     FileSpec::new("bmp", &["bmp"]),
                 ];
-    
+
                 let default_name = format!("{}{}", data.name, data.format.to_string());
                 let save_dialog_options = FileDialogOptions::new()
                     .allowed_types(formats)
                     .default_type(FileSpec::new("png", &["png"]))
                     .default_name(default_name);
-                
+
                 ctx.submit_command(druid::commands::SHOW_SAVE_PANEL.with(save_dialog_options.clone()))
             }else if shortcut == open{
                 let open_dialog_options: FileDialogOptions = FileDialogOptions::new()
@@ -654,15 +663,15 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
                 Application::global().quit();
             }else if shortcut == customize{
                 data.editing_shortcut = true;
-                data.new_name = "".to_string();
-                ctx.submit_command(SHORTCUT) 
+                data.new_shortcut = "".to_string();
+                ctx.submit_command(SHORTCUT)
             }
-                
-            
+
+
         }
 
         if let Event::KeyUp(_key) = event {
-            data.new_name.clear();
+            data.new_shortcut.clear();
             self.prec.clear();
         }
 
@@ -677,14 +686,14 @@ pub struct Drawer{
 }
 
 impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
-    fn event( 
-        &mut self, 
-        child: &mut W, 
-        ctx: &mut EventCtx, 
-        event: &Event, 
-        data: &mut Screenshot, 
-        _env: &Env, 
-    ) { 
+    fn event(
+        &mut self,
+        child: &mut W,
+        ctx: &mut EventCtx,
+        event: &Event,
+        data: &mut Screenshot,
+        _env: &Env,
+    ) {
         if data.edit_tool == EditTool::Pencil || data.edit_tool == EditTool::Highlighter{
             // ctx.set_cursor(&Cursor::Arrow);
             match event {
@@ -702,7 +711,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
                         data.custom_cursor = ctx.window().make_cursor(&data.custom_cursor_desc).unwrap_or(Cursor::Crosshair);
                         ctx.set_cursor(&data.custom_cursor);
                     }
-                    
+
                     let color = match data.color_tool{
                         ColorTool::Black => Color::BLACK,
                         ColorTool::Red => Color::RED,
@@ -739,7 +748,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
                     ctx.set_cursor(&Cursor::Arrow);
 
                     let screens = Screen::all().unwrap();
-                    let w_screen = screens[0].display_info.width; 
+                    let w_screen = screens[0].display_info.width;
                     let h_screen = screens[0].display_info.height;
                     let image = screens[0]
                         .capture_area(
@@ -765,16 +774,16 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
             match event{
                 Event::MouseDown(mouse_event) => {
                     self.flag_writing = true;
-                   
+
                     data.write.0[data.write.1].position = mouse_event.pos;
-                    
+
                     let ev_x = mouse_event.pos.x;
                     let ev_y = mouse_event.pos.y;
 
                     for (index, text) in data.write.0.iter().enumerate(){
                         let txt_x = text.position.x;
                         let txt_y = text.position.y;
-                        let w = text.dimensions.0; 
+                        let w = text.dimensions.0;
                         let h = text.dimensions.1;
                         if ev_x > txt_x && ev_x < txt_x + w && ev_y > txt_y && ev_y < txt_y + h {
                             data.editing_text = index as i32;
@@ -795,16 +804,16 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
                 }
                 Event::MouseMove(mouse_event) => {
                     if ctx.is_active() {
-                        
+
                         let txt_w =  data.write.0[data.editing_text as usize].dimensions.0;
                         let txt_h =  data.write.0[data.editing_text as usize].dimensions.1;
                         let pos_init = data.write.0[data.editing_text as usize].position;
                         let pos_final = Point::new(data.write.0[data.editing_text as usize].position.x + txt_w, data.write.0[data.editing_text as usize].position.y + txt_h);
 
 
-                        
-                        if data.editing_text != -1 && is_in_image(mouse_event.pos, data){ 
-                            
+
+                        if data.editing_text != -1 && is_in_image(mouse_event.pos, data){
+
                             let delta_x = mouse_event.pos.x - self.first_click_pos.x;
                             let delta_y = mouse_event.pos.y - self.first_click_pos.y;
                             self.first_click_pos = mouse_event.pos;
@@ -913,12 +922,12 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
                         // let col2 : Rgba<u8> = Rgba([col.r as u8, col.g as u8, col.b as u8, col.a as u8]);
                         // let w = (data.squares.0[data.squares.1].end.x - data.squares.0[data.squares.1].start.x).abs();
                         // let h = (data.squares.0[data.squares.1].end.y - data.squares.0[data.squares.1].start.y).abs();
-    
+
                         // // image1 = drawing::draw_hollow_ellipse(&image1, (rect.center().x as i32, rect.center().y as i32), rect.width() as i32, rect.height() as i32, col2);
                         // if w>0. && h>0.{
                         //     let rect2 = imageproc::rect::Rect::at(data.squares.0[data.squares.1].start.x as i32, data.squares.0[data.squares.1].start.y as i32).of_size(w as u32, h as u32);
                         //     image1 = drawing::draw_hollow_rect(&image1, rect2, col2);
-                            
+
                         //     image1
                         //     .save_with_format(
                         //         format!(
@@ -932,8 +941,8 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
                         //     .expect("Errore nel salvataggio automatico!");
                         // }
 
-                        
-                        
+
+
                         // data.squares.0[data.squares.1].image = ImageBuf::from_raw(
                         //     image1.clone().into_raw(),
                         //     druid::piet::ImageFormat::RgbaPremul,
@@ -976,7 +985,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
                         //erase arrows
                         for (index, arrow) in data.arrows.0.clone().iter().enumerate(){
                             for p in arrow_body_points(arrow.start, arrow.end) {
-                                if mouse_event.pos.distance(p) < 10. { 
+                                if mouse_event.pos.distance(p) < 10. {
                                     data.arrows.0.remove(index);
                                     data.arrows.1 -= 1;
                                     break;
@@ -996,7 +1005,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
 
                         //erase circles
                         for(index, circle_sq) in data.circles.0.clone().iter().enumerate(){
-                            if is_in_square(mouse_event.pos, circle_sq.start, circle_sq.end){ 
+                            if is_in_square(mouse_event.pos, circle_sq.start, circle_sq.end){
                                 data.circles.0.remove(index);
                                 data.circles.1 -= 1;
                                 break;
@@ -1016,34 +1025,34 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
 }
 
 fn is_in_image(point: Point, data: &Screenshot) -> bool{
-    point.x >= data.resized_area.x && 
-    point.y >= data.resized_area.y && 
-    point.x <= data.resized_area.x + data.resized_area.width && 
-    point.y <= data.resized_area.y + data.resized_area.height  
+    point.x >= data.resized_area.x &&
+    point.y >= data.resized_area.y &&
+    point.x <= data.resized_area.x + data.resized_area.width &&
+    point.y <= data.resized_area.y + data.resized_area.height
 }
 
 
 fn is_in_square(point: Point, square_start: Point, square_end: Point) -> bool{
     let p0 = Point::new(min(square_start.x, square_end.x), min(square_start.y, square_end.y));
     let p1 = Point::new(max(square_start.x, square_end.x), max(square_start.y, square_end.y));
-    point.x >= p0.x && 
-    point.y >= p0.y && 
-    point.x <= p1.x && 
+    point.x >= p0.x &&
+    point.y >= p0.y &&
+    point.x <= p1.x &&
     point.y <= p1.y
 }
 
 fn arrow_body_points(start: Point, end: Point) -> Vec<Point>{
     let mut segment = Vec::new();
-    
+
     // segment lenght
     let dx = end.x - start.x;
     let dy = end.y - start.y;
     let len = (dx * dx + dy * dy).sqrt();
-    
+
     // segment direction
     let dir_x = dx / len;
     let dir_y = dy / len;
-    
+
     // Calcoliamo i punti intermedi sul segmento
     for t in 0..=len as usize {
         let x = start.x + t as f64 * dir_x;

@@ -4,7 +4,7 @@ use druid::{
     },
     FontDescriptor, FontFamily, Color, Data, Env, EventCtx, ImageBuf, Lens,
     PaintCtx, Point, RenderContext, TimerToken,
-    Widget, WidgetExt, WindowDesc, WindowState, Rect, Cursor, CursorDesc,
+    Widget, WidgetExt, WindowDesc, WindowState, Rect, Cursor, CursorDesc, WidgetId,
 };
 use im::HashMap;
 use image::{ImageBuffer, Rgba, DynamicImage};
@@ -223,6 +223,7 @@ pub struct Screenshot {
     pub name: String,
     pub format: Format,
     pub new_name: String,
+    pub new_shortcut: String,
     pub editing_name: bool,
     pub screen_fatto: bool,
     pub img: ImageBuf,
@@ -239,6 +240,7 @@ pub struct Screenshot {
     pub selected_shortcut: Shortcut,
     pub editing_shortcut: bool,
     pub duplicate_shortcut: bool,
+    pub saved_shortcut: bool,
     pub monitor_id: usize,
     pub flag_desk2: bool,
     pub flag_edit: bool,
@@ -257,10 +259,11 @@ pub struct Screenshot {
     pub custom_cursor: Cursor,
     #[data(ignore)]
     pub custom_cursor_desc: CursorDesc,
+    pub flag_focus: bool,
 }
 
 impl Screenshot {
-    pub fn new(name: String, format: Format, newname: String) -> Self {
+    pub fn new(name: String, format: Format) -> Self {
         let mut shortcut = HashMap::new();
         shortcut.insert(Shortcut::Save, String::from("Control+s"));
         shortcut.insert(Shortcut::SaveAs, String::from("Control+a"));
@@ -293,7 +296,8 @@ impl Screenshot {
         Self {
             name,
             format,
-            new_name: newname,
+            new_name: String::from(""),
+            new_shortcut: String::from(""),
             editing_name: false,
             screen_fatto: false,
             img: ImageBuf::empty(),
@@ -310,6 +314,7 @@ impl Screenshot {
             selected_shortcut: Shortcut::Screenshot,
             editing_shortcut: true,
             duplicate_shortcut: false,
+            saved_shortcut: false,
             monitor_id: 0,
             flag_desk2: false,
             flag_edit: false,
@@ -327,6 +332,7 @@ impl Screenshot {
             painter: ImageBuf::empty(),
             custom_cursor: Cursor::Arrow, //do we really need it here? Could we move it to the controller?!
             custom_cursor_desc, //to check 
+            flag_focus: true,
         }
     }
 
@@ -868,6 +874,10 @@ pub fn show_screen(
 
     let sizedbox = SizedBox::new(img).width(1000.).height(562.5);
 
+    let home_button = Button::new("home").on_click(move |ctx: &mut EventCtx, data: &mut Screenshot, _env| {
+        ctx.window().clone().close();
+    });
+
     let resize_button =
         Button::new("resize").on_click(move |_ctx: &mut EventCtx, data: &mut Screenshot, _env| {
             data.flag_resize = true;
@@ -1017,6 +1027,7 @@ pub fn show_screen(
         }
     );
 
+    row_button1.add_child(home_button);
     row_button1.add_child(button2);
     row_button1.add_child(button1);
     row_button1.add_child(button3);

@@ -960,6 +960,35 @@ pub fn show_screen(
             )
             .unwrap();
 
+            //draw circles
+            for (index, circle) in data.circles.0.clone().iter().enumerate(){
+
+                if index == data.circles.1{
+                    break;
+                }
+                
+                let start_x = circle.start.x;
+                let start_y = circle.start.y;
+                let w_original: f64 = (circle.end.x - circle.start.x).abs();
+                let h_original = (circle.end.y - circle.start.y).abs();
+                let scale_x = data.img.width() as f64 / data.resized_area.width;
+                let scale_y = data.img.height() as f64 / data.resized_area.height;
+
+                let new_start_x = start_x*scale_x;
+                let new_start_y = start_y*scale_y;
+
+                let new_w = w_original*scale_x;
+                let new_h = h_original*scale_y;
+
+                let center = ((new_start_x+new_w/2.) as i32, (new_start_y+new_h/2.) as i32);
+
+                println!("w={}, h={}",start_x*scale_x, start_y*scale_y );
+
+                let color = circle.color;
+                let rgba_col = Rgba([color.as_rgba8().0, color.as_rgba8().1, color.as_rgba8().2, color.as_rgba8().3]);
+                drawing::draw_hollow_ellipse_mut(&mut image1, center, (new_w/2.) as i32, (new_h/2.) as i32, rgba_col);
+            }
+
             //draw squares
             for (index, square) in data.squares.0.clone().iter().enumerate(){
 
@@ -973,8 +1002,6 @@ pub fn show_screen(
                 let h_original = (square.end.y - square.start.y).abs();
                 let scale_x = data.img.width() as f64 / data.resized_area.width;
                 let scale_y = data.img.height() as f64 / data.resized_area.height;
-
-                println!("w={}, h={}",start_x*scale_x, start_y*scale_y );
 
                 let color = square.color;
                 let rgba_col = Rgba([color.as_rgba8().0, color.as_rgba8().1, color.as_rgba8().2, color.as_rgba8().3]);

@@ -1,25 +1,23 @@
 use druid::{
     widget::{
-        Svg, Stepper, Button, Container, Either, FillStrat, Flex, Image, Painter, SizedBox, ZStack, Label, TextBox, Align,
+        Stepper, Button, Container, Either, FillStrat, Flex, Image, Painter, SizedBox, ZStack, Label, TextBox, Align,
     },
-    FontDescriptor, FontFamily, Color, Data, Env, EventCtx, ImageBuf, Lens,
+    FontFamily, Color, Data, Env, EventCtx, ImageBuf, Lens,
     PaintCtx, Point, RenderContext, TimerToken,
-    Widget, WidgetExt, WindowDesc, WindowState, Rect, Cursor, CursorDesc, WidgetId,
+    Widget, WidgetExt, WindowDesc, WindowState, Rect, Cursor, CursorDesc,
 };
 use im::HashMap;
 use image::{ImageBuffer, Rgba, DynamicImage};
 use imageproc::{*, integral_image::ArrayData};
 
-use kurbo::{Shape, BezPath};
-use nalgebra::ComplexField;
-use piet_common::{/*D2DTextLayout, */Text, TextLayoutBuilder, d2d::Bitmap, PietImage, Piet};
+use piet::InterpolationMode;
+use piet_common::{/*D2DTextLayout, */Text, TextLayoutBuilder};
 use crate::controller::*;
 use arboard::Clipboard;
 use arboard::ImageData;
 use screenshots::Screen;
 use serde::{Deserialize, Serialize};
-use std::{borrow::Cow, hash::Hash, clone};
-use bincode;
+use std::{borrow::Cow, hash::Hash};
 
 #[derive(Clone, Data, PartialEq, Debug, Serialize, Deserialize)]
 pub enum Format {
@@ -369,6 +367,7 @@ impl Screenshot {
             .set_position((0.0, 0.0))
             .set_always_on_top(true);
 
+          //  current.set_window_state(WindowState::Restored);
         ctx.new_window(new_win);
     }
 
@@ -855,9 +854,9 @@ pub fn show_screen(
     data: &mut Screenshot,
 ) -> impl Widget<Screenshot> {
     data.flag_edit = false;
-    data.draw.points.clear();
-    data.draw.points.push_back((im::Vector::new(), Color::WHITE, 1., 1.));
-    data.draw.segment = 0;
+    // data.draw.points.clear();
+    // data.draw.points.push_back((im::Vector::new(), Color::WHITE, 1., 1.));
+    // data.draw.segment = 0;
     data.flag_resize = false;
     data.reset_resize_rect();
     let original_x = data.resized_area.x;
@@ -873,10 +872,6 @@ pub fn show_screen(
     let row_toolbar = build_toolbar();
 
     let sizedbox = SizedBox::new(img).width(1000.).height(562.5);
-
-    let home_button = Button::new("home").on_click(move |ctx: &mut EventCtx, data: &mut Screenshot, _env| {
-        ctx.window().clone().close();
-    });
 
     let resize_button =
         Button::new("resize").on_click(move |_ctx: &mut EventCtx, data: &mut Screenshot, _env| {
@@ -958,46 +953,42 @@ pub fn show_screen(
     let save = Button::new("Save").on_click(
         |_ctx, data: &mut Screenshot, _env: &Env|{
 
-            // let mut bottom: ImageBuffer<image::Rgba<u8>, Vec<u8>> = ImageBuffer::from_vec(
-            //     data.img.width() as u32,
-            //     data.img.height() as u32,
-            //     data.img.raw_pixels().to_vec(),
-            // )
-            // .unwrap();
+            let mut image1: ImageBuffer<image::Rgba<u8>, Vec<u8>> = ImageBuffer::from_vec(
+                data.img.width() as u32,
+                data.img.height() as u32,
+                data.img.raw_pixels().to_vec(),
+            )
+            .unwrap();
 
-            // let mut top: ImageBuffer<image::Rgba<u8>, Vec<u8>> = ImageBuffer::from_vec(
-            //     data.squares.0[0].image.width() as u32,
-            //     data.squares.0[0].image.height() as u32,
-            //     data.squares.0[0].image.raw_pixels().to_vec(),
-            // )
-            // .unwrap();
+            //draw squares
+            for (index, square) in data.squares.0.clone().iter().enumerate(){
 
-            // let screens = Screen::all().unwrap();
-            // let image: ImageBuffer<Rgba<u8>, Vec<u8>> = screens[0].capture().unwrap();
-
-
-            // // let top1 = ImageBuf::from_raw(
-            // //     image.clone().into_raw(),
-            // //     druid::piet::ImageFormat::RgbaPremul,
-            // //     image.clone().width() as usize,
-            // //     image.clone().height() as usize,
-            // // );
-
-            // // let mut top: ImageBuffer<image::Rgba<u8>, Vec<u8>> = ImageBuffer::from_vec(
-            // //     top1.width() as u32,
-            // //     top1.height() as u32,
-            // //     top1.raw_pixels().to_vec(),
-            // // )
-            // // .unwrap();
-    
+                if index == data.squares.1{
+                    break;
+                }
                 
-            // image::imageops::overlay(&mut bottom, &mut top, 0, 0);
-            // data.img = ImageBuf::from_raw(
-            //     bottom.clone().into_raw(),
-            //     druid::piet::ImageFormat::RgbaPremul,
-            //     bottom.clone().width() as usize,
-            //     bottom.clone().height() as usize,
-            // ); 
+                let start_x = square.start.x;
+                let start_y = square.start.y;
+                let w_original: f64 = (square.end.x - square.start.x).abs();
+                let h_original = (square.end.y - square.start.y).abs();
+                let scale_x = data.img.width() as f64 / data.resized_area.width;
+                let scale_y = data.img.height() as f64 / data.resized_area.height;
+
+                println!("w={}, h={}",start_x*scale_x, start_y*scale_y );
+
+                let color = square.color;
+                let rgba_col = Rgba([color.as_rgba8().0, color.as_rgba8().1, color.as_rgba8().2, color.as_rgba8().3]);
+                let rect2 = imageproc::rect::Rect::at((start_x*scale_x) as i32, (start_y*scale_y) as i32).of_size((w_original*scale_x) as u32, (h_original*scale_y) as u32);
+                drawing::draw_hollow_rect_mut(&mut image1, rect2, rgba_col);
+            }
+
+            data.img = ImageBuf::from_raw(
+                image1.clone().into_raw(),
+                druid::piet::ImageFormat::RgbaPremul,
+                image1.clone().width() as usize,
+                image1.clone().height() as usize,
+            );
+
             
         }
     );
@@ -1005,6 +996,7 @@ pub fn show_screen(
     let cancel = Button::new("Cancel").on_click(
         |_ctx, data: &mut Screenshot, _env: &Env|{
             data.flag_edit = false;
+            
             data.draw.points.clear();
             data.draw.points.push_back((im::Vector::new(), Color::WHITE, 1., 1.));
             data.draw.segment = 0;
@@ -1027,7 +1019,6 @@ pub fn show_screen(
         }
     );
 
-    row_button1.add_child(home_button);
     row_button1.add_child(button2);
     row_button1.add_child(button1);
     row_button1.add_child(button3);
@@ -1048,15 +1039,6 @@ pub fn show_screen(
             druid::widget::Label::new(""),
         ),
     ));
-
-    // // let size = druid::kurbo::Size::new(800.0, 600.0); // Sostituisci con le dimensioni desiderate.
-    // let mut image = ImageBuffer::new(data.img.width() as u32, data.img.height() as u32);
-    // zstack_layout.(ctx, data, env)
-    // // Creare un RenderContext basato sull'immagine.
-    // // let mut ctx = RenderContext::Image
-
-    // // Disegnare il widget sull'immagine.
-    // widget.draw(&mut ctx, &druid::Env::default(), size.to_rect());
 
     col.add_default_spacer();
     col.add_default_spacer();
@@ -1145,6 +1127,7 @@ pub fn manage_edit(data: &mut Screenshot) -> impl Widget<Screenshot>{
             let brush = ctx.solid_brush(color.with_alpha(data.draw.points[data.draw.segment].3));
             ctx.stroke(path, &brush, data.line_thickness);
 
+
             for i in 0..data.draw.segment{
                 let mut path = druid::kurbo::BezPath::new();
                 path.move_to(data.draw.points[i].0.head().unwrap_or(&point0).clone());
@@ -1153,24 +1136,6 @@ pub fn manage_edit(data: &mut Screenshot) -> impl Widget<Screenshot>{
                 }
                 let brush = ctx.solid_brush(data.draw.points[i].1.with_alpha(data.draw.points[i].3));
                 ctx.stroke(path, &brush, data.draw.points[i].2);
-
-                // let mut dynamic = DynamicImage::ImageRgba8(path);
-                // let rgba_buffer = dynamic.as_mut_rgba8().expect("failed to get rgba buffer").as_raw().as_slice();
-
-                // // let context = ImageBuffer::from_raw(100, 100, rgba_buffer).unwrap();
-                
-                // let top = ctx.make_image(100, 100, rgba_buffer, piet::ImageFormat::RgbaPremul).unwrap();
-
-
-                // let image1: ImageBuffer<image::Rgba<u8>, Vec<u8>> = ImageBuffer::from_vec(
-                //     data.img.width() as u32,
-                //     data.img.height() as u32,
-                //     data.img.raw_pixels().to_vec(),
-                // )
-                // .unwrap();
-    
-                // let mut bottom = DynamicImage::ImageRgba8(image1);
-                // image::imageops::overlay(&mut image1, &mut dynamic, 0, 0);
             }
 
             //GESTIONE WRITE
@@ -1263,24 +1228,9 @@ pub fn manage_edit(data: &mut Screenshot) -> impl Widget<Screenshot>{
                 if square.start != square.end{
                     let rect = druid::Rect::from_points(square.start, square.end);
                     ctx.stroke(rect, &square.color, square.thickness);
-
-                    // let mut  image1: ImageBuffer<image::Rgba<u8>, Vec<u8>> = ImageBuffer::from_vec(
-                    //     data.painter.width() as u32,
-                    //     data.painter.height() as u32,
-                    //     data.painter.raw_pixels().to_vec(),
-                    // )
-                    // .unwrap();
-
-                    
-                    
-                    // assign_painter_img(&mut data.clone(), image1);
                     
                 }
             }
-            
-            
-
-
     })
     .controller(Drawer {
         flag_drawing: false,
@@ -1307,13 +1257,3 @@ fn assign_dimensions_to_textbox(data: &mut Screenshot, index: usize) {
     data.write.0[index].dimensions = (data.write.0[index].thickness * longest as f64 * 0.555, data.write.0[index].thickness * numlines * 1.35);
 
 }
-
-// fn assign_painter_img(data: &mut Screenshot, image: ImageBuffer<image::Rgba<u8>, Vec<u8>>){
-//     data.painter = 
-//         ImageBuf::from_raw(
-//             image.clone().into_raw(),
-//             druid::piet::ImageFormat::RgbaPremul,
-//             image.clone().width() as usize,
-//             image.clone().height() as usize,
-//         );
-// }

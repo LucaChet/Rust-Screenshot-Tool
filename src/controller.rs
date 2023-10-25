@@ -747,25 +747,6 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
                     self.flag_drawing = false;
                     ctx.set_cursor(&Cursor::Arrow);
 
-                    let screens = Screen::all().unwrap();
-                    let w_screen = screens[0].display_info.width;
-                    let h_screen = screens[0].display_info.height;
-                    let image = screens[0]
-                        .capture_area(
-                           ((w_screen as f64 - data.resized_area.width * data.area.scale)/2.)  as i32,
-                            85  as i32,
-                            (1000. * data.area.scale)  as u32,
-                            (562.5 * data.area.scale) as u32,
-                        )
-                        .unwrap();
-
-                    data.img =  ImageBuf::from_raw(
-                        image.clone().into_raw(),
-                        druid::piet::ImageFormat::RgbaPremul,
-                        image.clone().width() as usize,
-                        image.clone().height() as usize,
-                    );
-
                 },
                 _ => ()
             }
@@ -916,39 +897,31 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
                     Event::MouseUp(_mouse_event) => {
                         ctx.set_active(false);
 
+                        // let start_x = data.squares.0[data.squares.1].start.x;
+                        // let start_y = data.squares.0[data.squares.1].start.y;
+                        // let w_original: f64 = (data.squares.0[data.squares.1].end.x - data.squares.0[data.squares.1].start.x).abs();
+                        // let h_original = (data.squares.0[data.squares.1].end.y - data.squares.0[data.squares.1].start.y).abs();
+                        // let scale_x = data.img.width() as f64 / data.resized_area.width;
+                        // let scale_y = data.img.height() as f64 / data.resized_area.height;
 
-                        // let mut image1 = ImageBuffer::default();
-                        // let col = RgbaArea{r: data.squares.0[data.squares.1].color.as_rgba8().0 as f64, g: data.squares.0[data.squares.1].color.as_rgba8().1 as f64, b: data.squares.0[data.squares.1].color.as_rgba8().2 as f64, a: data.squares.0[data.squares.1].color.as_rgba8().3 as f64};
-                        // let col2 : Rgba<u8> = Rgba([col.r as u8, col.g as u8, col.b as u8, col.a as u8]);
-                        // let w = (data.squares.0[data.squares.1].end.x - data.squares.0[data.squares.1].start.x).abs();
-                        // let h = (data.squares.0[data.squares.1].end.y - data.squares.0[data.squares.1].start.y).abs();
+                        // let mut image2: ImageBuffer<image::Rgba<u8>, Vec<u8>> = ImageBuffer::from_vec(
+                        //     data.img.width() as u32,
+                        //     data.img.height() as u32,
+                        //     data.img.raw_pixels().to_vec(),
+                        // )
+                        // .unwrap();
 
-                        // // image1 = drawing::draw_hollow_ellipse(&image1, (rect.center().x as i32, rect.center().y as i32), rect.width() as i32, rect.height() as i32, col2);
-                        // if w>0. && h>0.{
-                        //     let rect2 = imageproc::rect::Rect::at(data.squares.0[data.squares.1].start.x as i32, data.squares.0[data.squares.1].start.y as i32).of_size(w as u32, h as u32);
-                        //     image1 = drawing::draw_hollow_rect(&image1, rect2, col2);
+                        // let color = data.squares.0[data.squares.1].color;
+                        // let rgba_col = Rgba([color.as_rgba8().0, color.as_rgba8().1, color.as_rgba8().2, color.as_rgba8().3]);
 
-                        //     image1
-                        //     .save_with_format(
-                        //         format!(
-                        //             "{}/{}{}",
-                        //             data.default_save_path.clone(),
-                        //             data.name,
-                        //             data.format.to_string()
-                        //         ),
-                        //         image::ImageFormat::Png,
-                        //     )
-                        //     .expect("Errore nel salvataggio automatico!");
-                        // }
+                        // println!("col={:?}", rgba_col);
+                       
+                        // let rect2 = imageproc::rect::Rect::at((start_x*scale_x) as i32, (start_y*scale_y) as i32).of_size((w_original*scale_x) as u32, (h_original*scale_y) as u32);
+                        
+                        // drawing::draw_hollow_rect_mut(&mut image2, rect2, rgba_col);
+                        
 
-
-
-                        // data.squares.0[data.squares.1].image = ImageBuf::from_raw(
-                        //     image1.clone().into_raw(),
-                        //     druid::piet::ImageFormat::RgbaPremul,
-                        //     image1.clone().width() as usize,
-                        //     image1.clone().height() as usize,
-                        // );
+                
 
                         data.squares.0.push_back(Square::new());
                         data.squares.1 += 1;

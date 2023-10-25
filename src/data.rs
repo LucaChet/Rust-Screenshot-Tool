@@ -960,6 +960,27 @@ pub fn show_screen(
             )
             .unwrap();
 
+            //draw arrows
+            for (index, arrows) in data.arrows.0.clone().iter().enumerate(){
+
+                if index == data.arrows.1{
+                    break;
+                }
+                
+                let start_x = arrows.start.x;
+                let start_y = arrows.start.y;
+                let end_x = arrows.end.x;
+                let end_y = arrows.end.y;
+                let scale_x = data.img.width() as f64 / data.resized_area.width;
+                let scale_y = data.img.height() as f64 / data.resized_area.height;
+
+                let color = arrows.color;
+                let rgba_col = Rgba([color.as_rgba8().0, color.as_rgba8().1, color.as_rgba8().2, color.as_rgba8().3]);
+                drawing::draw_line_segment_mut(&mut image1, ((start_x*scale_x) as f32, (start_y*scale_y) as f32) , ((end_x*scale_x) as f32, (end_y*scale_y) as f32), rgba_col);
+                // drawing::draw_cubic_bezier_curve_mut(canvas, start, end, control_a, control_b, color)
+                
+            }
+
             //draw circles
             for (index, circle) in data.circles.0.clone().iter().enumerate(){
 
@@ -981,8 +1002,6 @@ pub fn show_screen(
                 let new_h = h_original*scale_y;
 
                 let center = ((new_start_x+new_w/2.) as i32, (new_start_y+new_h/2.) as i32);
-
-                println!("w={}, h={}",start_x*scale_x, start_y*scale_y );
 
                 let color = circle.color;
                 let rgba_col = Rgba([color.as_rgba8().0, color.as_rgba8().1, color.as_rgba8().2, color.as_rgba8().3]);

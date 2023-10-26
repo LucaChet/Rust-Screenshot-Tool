@@ -3361,6 +3361,7 @@ dependencies = [
  "piet",
  "piet-common",
  "raster",
+ "rusttype",
  "scrap",
  "screenshots",
  "serde",

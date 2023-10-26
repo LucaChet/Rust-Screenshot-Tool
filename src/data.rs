@@ -6,6 +6,7 @@ use druid::{
     PaintCtx, Point, RenderContext, TimerToken,
     Widget, WidgetExt, WindowDesc, WindowState, Rect, Cursor, CursorDesc,
 };
+use druid_shell::Scale;
 use im::HashMap;
 use image::{ImageBuffer, Rgba, DynamicImage};
 use imageproc::{*, integral_image::ArrayData};
@@ -18,6 +19,7 @@ use arboard::ImageData;
 use screenshots::Screen;
 use serde::{Deserialize, Serialize};
 use std::{borrow::Cow, hash::Hash};
+use rusttype::*;
 
 #[derive(Clone, Data, PartialEq, Debug, Serialize, Deserialize)]
 pub enum Format {
@@ -951,7 +953,7 @@ pub fn show_screen(
     );
 
     let save = Button::new("Save").on_click(
-        |_ctx, data: &mut Screenshot, _env: &Env|{
+        |ctx, data: &mut Screenshot, _env: &Env|{
 
             let mut image1: ImageBuffer<image::Rgba<u8>, Vec<u8>> = ImageBuffer::from_vec(
                 data.img.width() as u32,
@@ -1028,6 +1030,26 @@ pub fn show_screen(
                 drawing::draw_hollow_rect_mut(&mut image1, rect2, rgba_col);
             }
 
+            //draw text
+            for (index, text) in data.write.0.clone().iter().enumerate(){
+
+                if index == data.write.1{
+                    break;
+                }
+                
+                let start_x = text.position.x;
+                let start_y = text.position.y;
+                let scale_x = data.img.width() as f64 / data.resized_area.width;
+                let scale_y = data.img.height() as f64 / data.resized_area.height;
+
+                let color = text.color;
+                let rgba_col = Rgba([color.as_rgba8().0, color.as_rgba8().1, color.as_rgba8().2, color.as_rgba8().3]);
+                let font_data: &[u8] = include_bytes!("./DejaVuSansMono.ttf");
+                let font = Font::try_from_bytes(font_data).unwrap();
+                let scale = text.thickness as f32;
+                drawing::draw_text_mut(&mut image1, rgba_col, (start_x*scale_x) as i32, (start_y*scale_y) as i32, rusttype::Scale { x: scale*2., y: scale*2. }, &font, text.text.as_str());
+            }
+
             data.img = ImageBuf::from_raw(
                 image1.clone().into_raw(),
                 druid::piet::ImageFormat::RgbaPremul,
@@ -1035,7 +1057,34 @@ pub fn show_screen(
                 image1.clone().height() as usize,
             );
 
+            data.flag_edit = false;
             
+            data.draw.points.clear();
+            data.draw.points.push_back((im::Vector::new(), Color::WHITE, 1., 1.));
+            data.draw.segment = 0;
+
+            data.write.0.clear();
+            data.write.0.push_back(Write::new());
+            data.write.1 = 0;
+
+            data.arrows.0.clear();
+            data.arrows.0.push_back(Arrow::new());
+            data.arrows.1 = 0;
+
+            data.circles.0.clear();
+            data.circles.0.push_back(Circle::new());
+            data.circles.1 = 0;
+
+            data.squares.0.clear();
+            data.squares.0.push_back(Square::new());
+            data.squares.1 = 0;
+
+            data.editing_text = -1;
+            data.text=String::from("");
+            data.edit_tool = EditTool::Pencil;
+
+            data.screen_window(ctx);
+            ctx.window().close();
         }
     );
 
@@ -1062,6 +1111,10 @@ pub fn show_screen(
             data.squares.0.clear();
             data.squares.0.push_back(Square::new());
             data.squares.1 = 0;
+
+            data.editing_text = -1;
+            data.text=String::from("");
+            data.edit_tool = EditTool::Pencil;
         }
     );
 
@@ -1087,15 +1140,16 @@ pub fn show_screen(
     ));
 
     col.add_default_spacer();
-    col.add_default_spacer();
-    col.add_child(zstack_layout);
-    col.add_default_spacer();
-    col.add_default_spacer();
     col.add_child(Either::new(
         |data: &Screenshot, _: &Env| data.flag_edit,
         row_toolbar,
         Label::new(""),
     ));
+    col.add_default_spacer();
+    col.add_child(zstack_layout);
+    col.add_default_spacer();
+    col.add_default_spacer();
+    
     col
 }
 

@@ -1007,7 +1007,12 @@ pub fn show_screen(
 
                 let color = circle.color;
                 let rgba_col = Rgba([color.as_rgba8().0, color.as_rgba8().1, color.as_rgba8().2, color.as_rgba8().3]);
-                drawing::draw_hollow_ellipse_mut(&mut image1, center, (new_w/2.) as i32, (new_h/2.) as i32, rgba_col);
+
+
+                //problema overflow da risolvere
+                for i in 0..(circle.thickness as f64) as usize{
+                    drawing::draw_hollow_ellipse_mut(&mut image1, center, ((new_w + i as f64)/2.) as i32, ((new_h+i as f64)/2.) as i32, rgba_col);
+                }
             }
 
             //draw squares

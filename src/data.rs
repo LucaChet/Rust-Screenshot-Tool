@@ -18,7 +18,7 @@ use arboard::Clipboard;
 use arboard::ImageData;
 use screenshots::Screen;
 use serde::{Deserialize, Serialize};
-use std::{borrow::Cow, hash::Hash};
+use std::{borrow::Cow, hash::Hash, num::Wrapping};
 use rusttype::*;
 
 #[derive(Clone, Data, PartialEq, Debug, Serialize, Deserialize)]
@@ -1010,8 +1010,10 @@ pub fn show_screen(
 
 
                 //problema overflow da risolvere
-                for i in 0..(circle.thickness as f64) as usize{
-                    drawing::draw_hollow_ellipse_mut(&mut image1, center, ((new_w + i as f64)/2.) as i32, ((new_h+i as f64)/2.) as i32, rgba_col);
+                for i in 0..(circle.thickness*2 as f64) as usize{
+                    let width_radius = ((new_w /2.) + i as f64) as i32;
+                    let height_radius = ((new_h /2.) + i as f64) as i32;
+                    drawing::draw_hollow_ellipse_mut(&mut image1, center, width_radius, height_radius, rgba_col);
                 }
             }
 
@@ -1031,8 +1033,11 @@ pub fn show_screen(
 
                 let color = square.color;
                 let rgba_col = Rgba([color.as_rgba8().0, color.as_rgba8().1, color.as_rgba8().2, color.as_rgba8().3]);
-                let rect2 = imageproc::rect::Rect::at((start_x*scale_x) as i32, (start_y*scale_y) as i32).of_size((w_original*scale_x) as u32, (h_original*scale_y) as u32);
-                drawing::draw_hollow_rect_mut(&mut image1, rect2, rgba_col);
+
+                for i in 0..(square.thickness*2 as f64) as usize{
+                    let rect2 = imageproc::rect::Rect::at(((start_x*scale_x)-i as f64) as i32, ((start_y*scale_y)-i as f64) as i32).of_size(((w_original*scale_x)+2.*i as f64) as u32, ((h_original*scale_y)+2.*i as f64) as u32);
+                    drawing::draw_hollow_rect_mut(&mut image1, rect2, rgba_col);
+                }
             }
 
             //draw text
@@ -1087,6 +1092,7 @@ pub fn show_screen(
             data.editing_text = -1;
             data.text=String::from("");
             data.edit_tool = EditTool::Pencil;
+            data.line_thickness = 3.;
 
             data.screen_window(ctx);
             ctx.window().close();
@@ -1120,6 +1126,7 @@ pub fn show_screen(
             data.editing_text = -1;
             data.text=String::from("");
             data.edit_tool = EditTool::Pencil;
+            data.line_thickness = 3.;
         }
     );
 

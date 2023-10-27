@@ -978,9 +978,10 @@ pub fn show_screen(
 
                 let color = arrows.color;
                 let rgba_col = Rgba([color.as_rgba8().0, color.as_rgba8().1, color.as_rgba8().2, color.as_rgba8().3]);
-                drawing::draw_line_segment_mut(&mut image1, ((start_x*scale_x) as f32, (start_y*scale_y) as f32) , ((end_x*scale_x) as f32, (end_y*scale_y) as f32), rgba_col);
-                // drawing::draw_cubic_bezier_curve_mut(canvas, start, end, control_a, control_b, color)
-                
+
+                for i in 0..(arrows.thickness*2 as f64) as usize{
+                    drawing::draw_line_segment_mut(&mut image1, ( ((start_x*scale_x)+i as f64) as f32, ((start_y*scale_y)+i as f64) as f32) , ( ((end_x*scale_x)+i as f64) as f32, ((end_y*scale_y)+i as f64) as f32), rgba_col);
+                }
             }
 
             //draw circles

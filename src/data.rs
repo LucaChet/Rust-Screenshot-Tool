@@ -969,10 +969,10 @@ pub fn show_screen(
                     break;
                 }
                 
-                let start_x = arrows.start.x;
-                let start_y = arrows.start.y;
-                let end_x = arrows.end.x;
-                let end_y = arrows.end.y;
+                let start_x = arrows.start.x-data.resized_area.x;
+                let start_y = arrows.start.y-data.resized_area.y;
+                let end_x = arrows.end.x-data.resized_area.x;
+                let end_y = arrows.end.y-data.resized_area.y;
                 let scale_x = data.img.width() as f64 / data.resized_area.width;
                 let scale_y = data.img.height() as f64 / data.resized_area.height;
 
@@ -990,8 +990,9 @@ pub fn show_screen(
                     break;
                 }
                 
-                let start_x = circle.start.x;
-                let start_y = circle.start.y;
+                let start_x = circle.start.x-data.resized_area.x;  //facciamo meno per riportare allo (0,0) quando facciamo capture
+                let start_y = circle.start.y-data.resized_area.y;
+
                 let w_original: f64 = (circle.end.x - circle.start.x).abs();
                 let h_original = (circle.end.y - circle.start.y).abs();
                 let scale_x = data.img.width() as f64 / data.resized_area.width;
@@ -1024,8 +1025,9 @@ pub fn show_screen(
                     break;
                 }
                 
-                let start_x = square.start.x;
-                let start_y = square.start.y;
+                let start_x = square.start.x-data.resized_area.x;
+                let start_y = square.start.y-data.resized_area.y;
+
                 let w_original: f64 = (square.end.x - square.start.x).abs();
                 let h_original = (square.end.y - square.start.y).abs();
                 let scale_x = data.img.width() as f64 / data.resized_area.width;
@@ -1047,8 +1049,10 @@ pub fn show_screen(
                     break;
                 }
                 
-                let start_x = text.position.x;
-                let start_y = text.position.y;
+
+                let start_x = text.position.x-data.resized_area.x;
+                let start_y = text.position.y-data.resized_area.y;
+
                 let scale_x = data.img.width() as f64 / data.resized_area.width;
                 let scale_y = data.img.height() as f64 / data.resized_area.height;
 

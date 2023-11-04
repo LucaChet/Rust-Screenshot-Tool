@@ -976,11 +976,31 @@ pub fn show_screen(
                 let scale_x = data.img.width() as f64 / data.resized_area.width;
                 let scale_y = data.img.height() as f64 / data.resized_area.height;
 
+                /////////////////////
+                
+                
+                
+                let direction = (arrows.end - arrows.start).normalize(); // Calcola la direzione della freccia
+                let direction2 = druid::kurbo::Vec2::from_angle(direction.angle() + 50.);
+                let direction3 = druid::kurbo::Vec2::from_angle(direction.angle() - 50.);
+
+                let len = arrows.end.distance(arrows.start);
+                let arrow_base1 = arrows.end - direction2 * len*1./3.;
+                let arrow_base2 = arrows.end - direction3 * len*1./3.;
+                let arrow_base1x = arrow_base1.x-data.resized_area.x;
+                let arrow_base1y = arrow_base1.y-data.resized_area.y;
+                let arrow_base2x = arrow_base2.x-data.resized_area.x;
+                let arrow_base2y = arrow_base2.y-data.resized_area.y;
+                
+
+
                 let color = arrows.color;
                 let rgba_col = Rgba([color.as_rgba8().0, color.as_rgba8().1, color.as_rgba8().2, color.as_rgba8().3]);
 
                 for i in 0..(arrows.thickness*2 as f64) as usize{
                     drawing::draw_line_segment_mut(&mut image1, ( ((start_x*scale_x)+i as f64) as f32, ((start_y*scale_y)+i as f64) as f32) , ( ((end_x*scale_x)+i as f64) as f32, ((end_y*scale_y)+i as f64) as f32), rgba_col);
+                    drawing::draw_line_segment_mut(&mut image1, ( ((arrow_base1x*scale_x)+i as f64) as f32, ((arrow_base1y*scale_y)+i as f64) as f32) , ( ((end_x*scale_x)+i as f64) as f32, ((end_y*scale_y)+i as f64) as f32), rgba_col);
+                    drawing::draw_line_segment_mut(&mut image1, ( ((arrow_base2x*scale_x)+i as f64) as f32, ((arrow_base2y*scale_y)+i as f64) as f32) , ( ((end_x*scale_x)+i as f64) as f32, ((end_y*scale_y)+i as f64) as f32), rgba_col);
                 }
             }
 

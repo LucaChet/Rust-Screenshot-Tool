@@ -984,6 +984,8 @@ pub fn show_screen(
                 let direction2 = druid::kurbo::Vec2::from_angle(direction.angle() + 50.);
                 let direction3 = druid::kurbo::Vec2::from_angle(direction.angle() - 50.);
 
+                println!("dir freccia: {}", direction);
+                
                 let len = arrows.end.distance(arrows.start);
                 let arrow_base1 = arrows.end - direction2 * len*1./3.;
                 let arrow_base2 = arrows.end - direction3 * len*1./3.;
@@ -998,9 +1000,9 @@ pub fn show_screen(
                 let rgba_col = Rgba([color.as_rgba8().0, color.as_rgba8().1, color.as_rgba8().2, color.as_rgba8().3]);
 
                 for i in 0..(arrows.thickness*2 as f64) as usize{
-                    drawing::draw_line_segment_mut(&mut image1, ( ((start_x*scale_x)+i as f64) as f32, ((start_y*scale_y)+i as f64) as f32) , ( ((end_x*scale_x)+i as f64) as f32, ((end_y*scale_y)+i as f64) as f32), rgba_col);
-                    drawing::draw_line_segment_mut(&mut image1, ( ((arrow_base1x*scale_x)+i as f64) as f32, ((arrow_base1y*scale_y)+i as f64) as f32) , ( ((end_x*scale_x)+i as f64) as f32, ((end_y*scale_y)+i as f64) as f32), rgba_col);
-                    drawing::draw_line_segment_mut(&mut image1, ( ((arrow_base2x*scale_x)+i as f64) as f32, ((arrow_base2y*scale_y)+i as f64) as f32) , ( ((end_x*scale_x)+i as f64) as f32, ((end_y*scale_y)+i as f64) as f32), rgba_col);
+                    drawing::draw_line_segment_mut(&mut image1, ( ((start_x*scale_x)+i as f64*direction.y) as f32, ((start_y*scale_y)+i as f64*direction.x) as f32) , ( ((end_x*scale_x)+i as f64*direction.y) as f32, ((end_y*scale_y)+i as f64*direction.x) as f32), rgba_col);
+                    drawing::draw_line_segment_mut(&mut image1, ( ((arrow_base1x*scale_x)+i as f64*direction2.y) as f32, ((arrow_base1y*scale_y)+i as f64*direction2.x) as f32) , ( ((end_x*scale_x)+i as f64*direction2.y) as f32, ((end_y*scale_y)+i as f64*direction2.x) as f32), rgba_col);
+                    drawing::draw_line_segment_mut(&mut image1, ( ((arrow_base2x*scale_x)+i as f64*direction3.y) as f32, ((arrow_base2y*scale_y)+i as f64*direction3.x) as f32) , ( ((end_x*scale_x)+i as f64*direction3.y) as f32, ((end_y*scale_y)+i as f64*direction3.x) as f32), rgba_col);
                 }
             }
 

@@ -20,14 +20,14 @@ image = "0.24.7"
 piet = "0.6.2"
 piet-common = { version = "0.6.1", features = ["png"] }
 scrap = "0.5.0"
-native-dialog = "0.6.4"
 uuid = {version = "1.4.1", features = ["serde", "v4"]}
-winit = "0.28.5"
-tokio = { version = "1", features = ["full"] }
-raster = "0.2.0"
 kurbo = "0.10.2"
-nalgebra = "0.32.2"
 arboard = "3.2.1"
 imageproc = "0.23.0"
 bincode = "1.3.3"
 rusttype = "0.9.3"
+crossbeam = "0.8.2"
+livesplit-hotkey = "0.7.0"
+
+[profile.dev]
+overflow-checks = false

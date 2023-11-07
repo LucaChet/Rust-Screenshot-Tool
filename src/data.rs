@@ -8,7 +8,7 @@ use druid::{
 };
 use druid_shell::Scale;
 use im::HashMap;
-use image::{ImageBuffer, Rgba, DynamicImage};
+use image::{ImageBuffer, Rgba, DynamicImage, Pixel};
 use imageproc::{*, integral_image::ArrayData};
 
 use piet::InterpolationMode;
@@ -18,8 +18,11 @@ use arboard::Clipboard;
 use arboard::ImageData;
 use screenshots::Screen;
 use serde::{Deserialize, Serialize};
-use std::{borrow::Cow, hash::Hash, num::Wrapping};
+use std::{borrow::Cow, hash::Hash};
 use rusttype::*;
+use std::sync::mpsc::{channel, Sender, Receiver};
+use crossbeam::channel::{bounded, Receiver as CrossReceiver, Sender as CrossSender};
+use livesplit_hotkey::*;
 
 #[derive(Clone, Data, PartialEq, Debug, Serialize, Deserialize)]
 pub enum Format {
@@ -260,6 +263,8 @@ pub struct Screenshot {
     #[data(ignore)]
     pub custom_cursor_desc: CursorDesc,
     pub flag_focus: bool,
+    // #[data(ignore)]
+    // sender: CrossSender<(usize, Vec<String>)>,
 }
 
 impl Screenshot {
@@ -292,6 +297,29 @@ impl Screenshot {
         // The (0,0) refers to where the "hotspot" is located, so where the mouse actually points.
         // (0,0) is the top left, and (cursor_image.width(), cursor_image.width()) the bottom right.
         let custom_cursor_desc = CursorDesc::new(cursor_image, (0.0, 0.0));
+
+        // let (sender, receiver) = bounded(1);
+        
+        // std::thread::spawn(move ||{
+        //     loop{
+        //         let hk1 = livesplit_hotkey::Hotkey{
+        //             modifiers: livesplit_hotkey::Modifiers::CONTROL,
+        //             key_code: livesplit_hotkey::KeyCode::KeyG,
+        //         };
+
+        //         let hook = livesplit_hotkey::Hook::new().unwrap();
+        //         hook.register(hk1, {
+        //             self.action_capture(ctx);
+        //         });
+
+        //         let mx = receiver.recv();
+        //         match mx {
+        //             Err(_) => break,
+        //             Ok(mx) => (),
+        //         }
+               
+        //     }
+        // });
 
         Self {
             name,
@@ -333,6 +361,7 @@ impl Screenshot {
             custom_cursor: Cursor::Arrow, //do we really need it here? Could we move it to the controller?!
             custom_cursor_desc, //to check 
             flag_focus: true,
+            // sender,
         }
     }
 
@@ -962,6 +991,42 @@ pub fn show_screen(
             )
             .unwrap();
 
+            let mut top_image: ImageBuffer<image::Rgba<u8>, Vec<u8>> = ImageBuffer::new(data.img.width() as u32, data.img.height() as u32);
+
+            //draw path
+            for (index, line) in data.draw.points.clone().iter().enumerate(){
+                
+                if index == data.draw.segment{
+                    break;
+                }
+
+                let color = line.1.with_alpha(line.3);
+                let rgba_col = Rgba([color.as_rgba8().0, color.as_rgba8().1, color.as_rgba8().2, color.as_rgba8().3]);
+                let scale_x = data.img.width() as f64 / data.resized_area.width;
+                let scale_y = data.img.height() as f64 / data.resized_area.height;
+
+                let mut points: Vec<imageproc::point::Point<i32>> = Vec::new();
+                for i in 0..line.0.len()-1{
+                    // println!("POINT: {:?}", line.0);
+                    let direction = (line.0[i+1] - line.0[i]).normalize(); // Calcola la direzione della freccia
+                    let normal = druid::kurbo::Vec2::new(-direction.y, direction.x); 
+                    for j in 0..(line.2*2.) as usize{
+                        let p1 = imageproc::point::Point{x: ((line.0[i].x-data.resized_area.x)*scale_x+j as f64*normal.x) as i32, y: ((line.0[i].y-data.resized_area.y)*scale_y+j as f64*normal.y) as i32};
+                        let p2 = imageproc::point::Point{x: ((line.0[i+1].x-data.resized_area.x)*scale_x+j as f64*normal.x) as i32, y: ((line.0[i+1].y-data.resized_area.y)*scale_y+j as f64*normal.y) as i32};
+                        if p1 == p2{
+                            continue;
+                        }
+                        points.push(p1);
+                        points.push(p2);
+                        
+                        drawing::draw_polygon_mut(&mut top_image, &points, rgba_col);
+                        points.clear();
+                        // drawing::draw_line_segment_mut(&mut image1, ( ((line.0[i].x-data.resized_area.x)*scale_x+j as f64*normal.x) as f32, ((line.0[i].y-data.resized_area.y)*scale_y+j as f64*normal.y) as f32) , ( ((line.0[i+1].x-data.resized_area.x)*scale_x+j as f64*normal.x) as f32, ((line.0[i+1].y-data.resized_area.y)*scale_y+j as f64*normal.y) as f32), rgba_col);
+                    }
+                }
+                image::imageops::overlay(&mut image1, &mut top_image, 0, 0);
+            }
+
             //draw arrows
             for (index, arrows) in data.arrows.0.clone().iter().enumerate(){
 
@@ -976,15 +1041,13 @@ pub fn show_screen(
                 let scale_x = data.img.width() as f64 / data.resized_area.width;
                 let scale_y = data.img.height() as f64 / data.resized_area.height;
 
-                /////////////////////
-                
-                
-                
                 let direction = (arrows.end - arrows.start).normalize(); // Calcola la direzione della freccia
                 let direction2 = druid::kurbo::Vec2::from_angle(direction.angle() + 50.);
                 let direction3 = druid::kurbo::Vec2::from_angle(direction.angle() - 50.);
 
-                println!("dir freccia: {}", direction);
+                let normal = druid::kurbo::Vec2::new(-direction.y, direction.x); 
+                let normal2 = druid::kurbo::Vec2::new(-direction2.y, direction2.x); 
+                let normal3 = druid::kurbo::Vec2::new(-direction3.y, direction3.x); 
                 
                 let len = arrows.end.distance(arrows.start);
                 let arrow_base1 = arrows.end - direction2 * len*1./3.;
@@ -993,16 +1056,14 @@ pub fn show_screen(
                 let arrow_base1y = arrow_base1.y-data.resized_area.y;
                 let arrow_base2x = arrow_base2.x-data.resized_area.x;
                 let arrow_base2y = arrow_base2.y-data.resized_area.y;
-                
-
 
                 let color = arrows.color;
                 let rgba_col = Rgba([color.as_rgba8().0, color.as_rgba8().1, color.as_rgba8().2, color.as_rgba8().3]);
 
                 for i in 0..(arrows.thickness*2 as f64) as usize{
-                    drawing::draw_line_segment_mut(&mut image1, ( ((start_x*scale_x)+i as f64*direction.y) as f32, ((start_y*scale_y)+i as f64*direction.x) as f32) , ( ((end_x*scale_x)+i as f64*direction.y) as f32, ((end_y*scale_y)+i as f64*direction.x) as f32), rgba_col);
-                    drawing::draw_line_segment_mut(&mut image1, ( ((arrow_base1x*scale_x)+i as f64*direction2.y) as f32, ((arrow_base1y*scale_y)+i as f64*direction2.x) as f32) , ( ((end_x*scale_x)+i as f64*direction2.y) as f32, ((end_y*scale_y)+i as f64*direction2.x) as f32), rgba_col);
-                    drawing::draw_line_segment_mut(&mut image1, ( ((arrow_base2x*scale_x)+i as f64*direction3.y) as f32, ((arrow_base2y*scale_y)+i as f64*direction3.x) as f32) , ( ((end_x*scale_x)+i as f64*direction3.y) as f32, ((end_y*scale_y)+i as f64*direction3.x) as f32), rgba_col);
+                    drawing::draw_line_segment_mut(&mut image1, ( ((start_x*scale_x)+i as f64*normal.x) as f32, ((start_y*scale_y)+i as f64*normal.y) as f32) , ( ((end_x*scale_x)+i as f64*normal.x) as f32, ((end_y*scale_y)+i as f64*normal.y) as f32), rgba_col);
+                    drawing::draw_line_segment_mut(&mut image1, ( ((arrow_base1x*scale_x)+i as f64*normal2.x) as f32, ((arrow_base1y*scale_y)+i as f64*normal2.y) as f32) , ( ((end_x*scale_x)+i as f64*normal2.x) as f32, ((end_y*scale_y)+i as f64*normal2.y) as f32), rgba_col);
+                    drawing::draw_line_segment_mut(&mut image1, ( ((arrow_base2x*scale_x)+i as f64*normal3.x) as f32, ((arrow_base2y*scale_y)+i as f64*normal3.y) as f32) , ( ((end_x*scale_x)+i as f64*normal3.x) as f32, ((end_y*scale_y)+i as f64*normal3.y) as f32), rgba_col);
                 }
             }
 

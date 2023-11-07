@@ -896,33 +896,6 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
                     }
                     Event::MouseUp(_mouse_event) => {
                         ctx.set_active(false);
-
-                        // let start_x = data.squares.0[data.squares.1].start.x;
-                        // let start_y = data.squares.0[data.squares.1].start.y;
-                        // let w_original: f64 = (data.squares.0[data.squares.1].end.x - data.squares.0[data.squares.1].start.x).abs();
-                        // let h_original = (data.squares.0[data.squares.1].end.y - data.squares.0[data.squares.1].start.y).abs();
-                        // let scale_x = data.img.width() as f64 / data.resized_area.width;
-                        // let scale_y = data.img.height() as f64 / data.resized_area.height;
-
-                        // let mut image2: ImageBuffer<image::Rgba<u8>, Vec<u8>> = ImageBuffer::from_vec(
-                        //     data.img.width() as u32,
-                        //     data.img.height() as u32,
-                        //     data.img.raw_pixels().to_vec(),
-                        // )
-                        // .unwrap();
-
-                        // let color = data.squares.0[data.squares.1].color;
-                        // let rgba_col = Rgba([color.as_rgba8().0, color.as_rgba8().1, color.as_rgba8().2, color.as_rgba8().3]);
-
-                        // println!("col={:?}", rgba_col);
-                       
-                        // let rect2 = imageproc::rect::Rect::at((start_x*scale_x) as i32, (start_y*scale_y) as i32).of_size((w_original*scale_x) as u32, (h_original*scale_y) as u32);
-                        
-                        // drawing::draw_hollow_rect_mut(&mut image2, rect2, rgba_col);
-                        
-
-                
-
                         data.squares.0.push_back(Square::new());
                         data.squares.1 += 1;
                     }

@@ -10,7 +10,7 @@ use druid::{
 };
 
 
-use druid_shell::{HotKey, SysMods, Application};
+use druid_shell::{HotKey, SysMods, Application, TimerToken};
 use druid_widget_nursery::{DropdownSelect, WidgetExt as _};
 use image::ImageBuffer;
 
@@ -110,7 +110,7 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
 
     ZStack::new(col.with_flex_child(row, FlexParams::new(1.0, CrossAxisAlignment::Start)))
         .with_aligned_child(Padding::new(5., row_timer), UnitPoint::BOTTOM_RIGHT)
-        .controller(HotkeyScreen {code: String::from(""), prec: String::from("")})
+        .controller(HotkeyScreen {code: String::from(""), prec: String::from(""), timer: TimerToken::next(), flag: false})
 
 }
 

@@ -1,8 +1,10 @@
+use crossbeam::epoch::Pointable;
 use druid::{
     FileDialogOptions, Selector, WindowDesc, commands, AppDelegate, Code, Command, Cursor, DelegateCtx, Env, Event, EventCtx
     ,Handled, LocalizedString, MouseButton, Point, Target, Widget, Color,
     WindowState, CursorDesc, ImageBuf, FileSpec
 };
+use druid_shell::Scale;
 use kurbo::BezPath;
 use std::time::Duration;
 
@@ -573,11 +575,36 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotKeyController {
         }
         child.event(ctx, event, data, _env);
     }
+
+    fn lifecycle(
+        &mut self,
+        child: &mut W,
+        ctx: &mut druid::LifeCycleCtx,
+        event: &druid::LifeCycle,
+        data: &Screenshot,
+        env: &Env,
+    ) {
+        child.lifecycle(ctx, event, data, env)
+    }
+
+    fn update(
+        &mut self,
+        child: &mut W,
+        ctx: &mut druid::UpdateCtx,
+        old_data: &Screenshot,
+        data: &Screenshot,
+        env: &Env,
+    ) {
+        child.update(ctx, old_data, data, env)
+    }
+
 }
 
 pub struct HotkeyScreen{
     pub prec: String,
     pub code: String,
+    pub timer: TimerToken,
+    pub flag: bool,
 }
 
 impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
@@ -589,10 +616,36 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
         data: &mut Screenshot,
         _env: &Env,
     ) {
+        if self.flag == false{
+            println!("knksm");
+            self.timer = ctx.request_timer(Duration::from_millis(1 as u64));
+            self.flag= true;
+        }
         if data.flag_focus{
             ctx.request_focus();
-        }   
-        if let Event::KeyDown(key) = event {
+        }
+        if let Event::Timer(id) = event{
+            println!("entrato");
+            if self.timer == *id{
+                if data.receiver_app.is_full(){
+                    // println!("dklwkdsw");
+                    let mx = data.receiver_app.recv();
+                    match mx{
+                        Ok(mx) => {
+                            if mx == 1{
+                                data.action_screen(ctx);
+                            }else if mx==2{
+                                data.action_capture(ctx);
+                            }
+                        }
+                        Err(_) => panic!("panic shortcut!"),
+                    }
+                }
+            }
+            self.flag=false;
+        }
+
+        if let Event::KeyDown(key) = event{
             self.code = key.key.clone().to_string();
             if self.code != self.prec{
                 if self.prec != "".to_string(){
@@ -677,6 +730,29 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
 
         child.event(ctx, event, data, _env);
     }
+
+    fn lifecycle(
+        &mut self,
+        child: &mut W,
+        ctx: &mut druid::LifeCycleCtx,
+        event: &druid::LifeCycle,
+        data: &Screenshot,
+        env: &Env,
+    ) {
+        child.lifecycle(ctx, event, data, env)
+    }
+
+    fn update(
+        &mut self,
+        child: &mut W,
+        ctx: &mut druid::UpdateCtx,
+        old_data: &Screenshot,
+        data: &Screenshot,
+        env: &Env,
+    ) {
+        child.update(ctx, old_data, data, env)
+    }
+
 }
 
 pub struct Drawer{

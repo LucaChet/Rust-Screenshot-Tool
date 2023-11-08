@@ -29,5 +29,5 @@ rusttype = "0.9.3"
 crossbeam = "0.8.2"
 livesplit-hotkey = "0.7.0"
 
-[profile.dev]
-overflow-checks = false
+# [profile.dev]
+# overflow-checks = false

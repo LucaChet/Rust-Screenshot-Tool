@@ -263,8 +263,9 @@ pub struct Screenshot {
     #[data(ignore)]
     pub custom_cursor_desc: CursorDesc,
     pub flag_focus: bool,
-    // #[data(ignore)]
-    // sender: CrossSender<(usize, Vec<String>)>,
+    #[data(ignore)]
+    pub receiver_app: CrossReceiver<usize>,
+    // sender: CrossSender<Vec<String>>,
 }
 
 impl Screenshot {
@@ -298,28 +299,37 @@ impl Screenshot {
         // (0,0) is the top left, and (cursor_image.width(), cursor_image.width()) the bottom right.
         let custom_cursor_desc = CursorDesc::new(cursor_image, (0.0, 0.0));
 
-        // let (sender, receiver) = bounded(1);
+        let (sender_th, receiver_app) = bounded(1);
+        // let (sender_app, receiver_th) = bounded(1);
         
-        // std::thread::spawn(move ||{
-        //     loop{
-        //         let hk1 = livesplit_hotkey::Hotkey{
-        //             modifiers: livesplit_hotkey::Modifiers::CONTROL,
-        //             key_code: livesplit_hotkey::KeyCode::KeyG,
-        //         };
+        std::thread::spawn(move ||{
+            println!("dentro il thread");
+                let hk1 = livesplit_hotkey::Hotkey{
+                    modifiers: livesplit_hotkey::Modifiers::CONTROL,
+                    key_code: livesplit_hotkey::KeyCode::KeyH,
+                };
 
-        //         let hook = livesplit_hotkey::Hook::new().unwrap();
-        //         hook.register(hk1, {
-        //             self.action_capture(ctx);
-        //         });
+                let hook = livesplit_hotkey::Hook::new().unwrap();
 
-        //         let mx = receiver.recv();
-        //         match mx {
-        //             Err(_) => break,
-        //             Ok(mx) => (),
-        //         }
+                loop{
+                    // println!("loop");
+                    let sender_th2=sender_th.clone();
+
+                    
+                    let _res = hook.register(hk1, move || {
+                        sender_th2.send(2).expect("Error shortcut");
+                        println!("ho mandato {}", 2);
+                    });
+                
+
+                // let mx: std::result::Result<_, crossbeam::channel::RecvError> = receiver.recv();
+                // match mx {
+                //     Err(_) => break,
+                //     Ok(mx) => (),
+                // }
                
-        //     }
-        // });
+                }
+        });
 
         Self {
             name,
@@ -361,7 +371,7 @@ impl Screenshot {
             custom_cursor: Cursor::Arrow, //do we really need it here? Could we move it to the controller?!
             custom_cursor_desc, //to check 
             flag_focus: true,
-            // sender,
+            receiver_app,
         }
     }
 
@@ -1060,10 +1070,18 @@ pub fn show_screen(
                 let color = arrows.color;
                 let rgba_col = Rgba([color.as_rgba8().0, color.as_rgba8().1, color.as_rgba8().2, color.as_rgba8().3]);
 
-                for i in 0..(arrows.thickness*2 as f64) as usize{
-                    drawing::draw_line_segment_mut(&mut image1, ( ((start_x*scale_x)+i as f64*normal.x) as f32, ((start_y*scale_y)+i as f64*normal.y) as f32) , ( ((end_x*scale_x)+i as f64*normal.x) as f32, ((end_y*scale_y)+i as f64*normal.y) as f32), rgba_col);
-                    drawing::draw_line_segment_mut(&mut image1, ( ((arrow_base1x*scale_x)+i as f64*normal2.x) as f32, ((arrow_base1y*scale_y)+i as f64*normal2.y) as f32) , ( ((end_x*scale_x)+i as f64*normal2.x) as f32, ((end_y*scale_y)+i as f64*normal2.y) as f32), rgba_col);
-                    drawing::draw_line_segment_mut(&mut image1, ( ((arrow_base2x*scale_x)+i as f64*normal3.x) as f32, ((arrow_base2y*scale_y)+i as f64*normal3.y) as f32) , ( ((end_x*scale_x)+i as f64*normal3.x) as f32, ((end_y*scale_y)+i as f64*normal3.y) as f32), rgba_col);
+                for i in 0..(arrows.thickness as f64) as usize{
+                    // if i%2 == 0{
+                        drawing::draw_line_segment_mut(&mut image1, ( ((start_x*scale_x)+i as f64*normal.x) as f32, ((start_y*scale_y)+i as f64*normal.y) as f32) , ( ((end_x*scale_x)+i as f64*normal.x) as f32, ((end_y*scale_y)+i as f64*normal.y) as f32), rgba_col);
+                        drawing::draw_line_segment_mut(&mut image1, ( ((arrow_base1x*scale_x)+i as f64*normal2.x) as f32, ((arrow_base1y*scale_y)+i as f64*normal2.y) as f32) , ( ((end_x*scale_x)+i as f64*normal2.x) as f32, ((end_y*scale_y)+i as f64*normal2.y) as f32), rgba_col);
+                        drawing::draw_line_segment_mut(&mut image1, ( ((arrow_base2x*scale_x)+i as f64*normal3.x) as f32, ((arrow_base2y*scale_y)+i as f64*normal3.y) as f32) , ( ((end_x*scale_x)+i as f64*normal3.x) as f32, ((end_y*scale_y)+i as f64*normal3.y) as f32), rgba_col);
+                    // }else{
+                        drawing::draw_line_segment_mut(&mut image1, ( ((start_x*scale_x)-i as f64*normal.x) as f32, ((start_y*scale_y)-i as f64*normal.y) as f32) , ( ((end_x*scale_x)-i as f64*normal.x) as f32, ((end_y*scale_y)-i as f64*normal.y) as f32), rgba_col);
+                        drawing::draw_line_segment_mut(&mut image1, ( ((arrow_base1x*scale_x)-i as f64*normal2.x) as f32, ((arrow_base1y*scale_y)-i as f64*normal2.y) as f32) , ( ((end_x*scale_x)-i as f64*normal2.x) as f32, ((end_y*scale_y)-i as f64*normal2.y) as f32), rgba_col);
+                        drawing::draw_line_segment_mut(&mut image1, ( ((arrow_base2x*scale_x)-i as f64*normal3.x) as f32, ((arrow_base2y*scale_y)-i as f64*normal3.y) as f32) , ( ((end_x*scale_x)-i as f64*normal3.x) as f32, ((end_y*scale_y)-i as f64*normal3.y) as f32), rgba_col);
+                    // }
+
+                   
                 }
             }
 

@@ -23,6 +23,8 @@ use rusttype::*;
 use std::sync::mpsc::{channel, Sender, Receiver};
 use crossbeam::channel::{bounded, Receiver as CrossReceiver, Sender as CrossSender};
 use livesplit_hotkey::*;
+use livesplit_core::*;
+use std::str::FromStr;
 
 #[derive(Clone, Data, PartialEq, Debug, Serialize, Deserialize)]
 pub enum Format {
@@ -244,6 +246,11 @@ pub struct Screenshot {
     pub editing_shortcut: bool,
     pub duplicate_shortcut: bool,
     pub saved_shortcut: bool,
+    pub shortcut_order: bool,  //order della shortcut per i modifiers
+    pub one_key: bool,
+    pub with_modifiers: bool,
+    pub keycode_screen: String,
+    pub keycode_capture: String,
     pub monitor_id: usize,
     pub flag_desk2: bool,
     pub flag_edit: bool,
@@ -265,7 +272,8 @@ pub struct Screenshot {
     pub flag_focus: bool,
     #[data(ignore)]
     pub receiver_app: CrossReceiver<usize>,
-    // sender: CrossSender<Vec<String>>,
+    #[data(ignore)]
+    pub sender_app: Sender<(String, String, String, String)>,
 }
 
 impl Screenshot {
@@ -300,33 +308,82 @@ impl Screenshot {
         let custom_cursor_desc = CursorDesc::new(cursor_image, (0.0, 0.0));
 
         let (sender_th, receiver_app) = bounded(1);
-        // let (sender_app, receiver_th) = bounded(1);
+        let (sender_app, receiver_th) = channel::<(String, String, String, String)>();
         
         std::thread::spawn(move ||{
             println!("dentro il thread");
-                let hk1 = livesplit_hotkey::Hotkey{
+                let mut hk1 = livesplit_hotkey::Hotkey{
                     modifiers: livesplit_hotkey::Modifiers::CONTROL,
-                    key_code: livesplit_hotkey::KeyCode::KeyH,
+                    key_code: livesplit_hotkey::KeyCode::KeyT,
+                };
+
+                let mut hk2 = livesplit_hotkey::Hotkey{
+                    modifiers: livesplit_hotkey::Modifiers::CONTROL,
+                    key_code: livesplit_hotkey::KeyCode::KeyY,
                 };
 
                 let hook = livesplit_hotkey::Hook::new().unwrap();
 
                 loop{
-                    // println!("loop");
                     let sender_th2=sender_th.clone();
-
+                    let sender_th3=sender_th.clone();
                     
                     let _res = hook.register(hk1, move || {
-                        sender_th2.send(2).expect("Error shortcut");
-                        println!("ho mandato {}", 2);
+                        sender_th2.send(1).expect("Error shortcut");
                     });
-                
 
-                // let mx: std::result::Result<_, crossbeam::channel::RecvError> = receiver.recv();
-                // match mx {
-                //     Err(_) => break,
-                //     Ok(mx) => (),
-                // }
+                    let _res = hook.register(hk2, move || {
+                        sender_th3.send(2).expect("Error shortcut");
+                    });
+
+                    let mx = receiver_th.recv();
+                    match mx {
+                        Err(_) => break,
+                        Ok(mx) => {
+                            let mut hk1_new = livesplit_hotkey::Hotkey{
+                                modifiers: livesplit_hotkey::Modifiers::empty(),
+                                key_code: livesplit_hotkey::KeyCode::KeyT,
+                            };
+
+                            let mut hk2_new = livesplit_hotkey::Hotkey{
+                                modifiers: livesplit_hotkey::Modifiers::empty(),
+                                key_code: livesplit_hotkey::KeyCode::KeyY,
+                            };
+
+                            let _res = hook.unregister(hk1);
+                            let _res = hook.unregister(hk2);
+                            
+                            let screen: Vec<&str>  = mx.0.split("+").collect();
+                            let capture: Vec<&str> = mx.2.split("+").collect();
+                            
+                            for code in screen{
+                                if code == "Control"{
+                                    hk1_new.modifiers.set(livesplit_hotkey::Modifiers::CONTROL, true);
+                                }else if code == "Alt"{
+                                    hk1_new.modifiers.set(livesplit_hotkey::Modifiers::ALT, true);
+                                }else if code == "Shift"{
+                                    hk1_new.modifiers.set(livesplit_hotkey::Modifiers::SHIFT, true);
+                                }else{
+                                    hk1_new.key_code = livesplit_core::hotkey::KeyCode::from_str(mx.1.as_str()).unwrap();
+                                }
+                            }
+
+                            for code in capture{
+                                if code == "Control"{
+                                    hk2_new.modifiers.set(livesplit_hotkey::Modifiers::CONTROL, true);
+                                }else if code == "Alt"{
+                                    hk2_new.modifiers.set(livesplit_hotkey::Modifiers::ALT, true);
+                                }else if code == "Shift"{
+                                    hk2_new.modifiers.set(livesplit_hotkey::Modifiers::SHIFT, true);
+                                }else{
+                                    hk2_new.key_code = livesplit_core::hotkey::KeyCode::from_str(mx.3.as_str()).unwrap();
+                                }
+                            }
+
+                            hk1 = hk1_new;
+                            hk2 = hk2_new;
+                        },
+                    }
                
                 }
         });
@@ -353,6 +410,11 @@ impl Screenshot {
             editing_shortcut: true,
             duplicate_shortcut: false,
             saved_shortcut: false,
+            shortcut_order: true,
+            one_key: true,
+            with_modifiers: false,
+            keycode_screen: String::from(""),
+            keycode_capture: String::from(""),
             monitor_id: 0,
             flag_desk2: false,
             flag_edit: false,
@@ -372,6 +434,7 @@ impl Screenshot {
             custom_cursor_desc, //to check 
             flag_focus: true,
             receiver_app,
+            sender_app,
         }
     }
 

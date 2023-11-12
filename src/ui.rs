@@ -293,7 +293,7 @@ pub fn modify_shortcut() -> impl Widget<Screenshot> {
     let save = Either::new(|data, _: &Env| data.new_shortcut == "".to_string(),
         Label::new(""),
         Button::new("Save").on_click(|_ctx, data: &mut Screenshot, _env|{
-            if !data.duplicate_shortcut{
+            if !data.duplicate_shortcut && data.shortcut_order && data.with_modifiers && data.one_key{
                 match data.selected_shortcut{
                     Shortcut::Save => {
                         data.shortcut.entry(Shortcut::Save).and_modify(|el| *el = data.new_shortcut.clone());
@@ -317,6 +317,7 @@ pub fn modify_shortcut() -> impl Widget<Screenshot> {
                         data.shortcut.entry(Shortcut::Capture).and_modify(|el| *el = data.new_shortcut.clone());
                     }
                 }
+                let _res = data.sender_app.send((data.shortcut.get(&Shortcut::Screenshot).unwrap().to_string(), data.keycode_screen.clone(), data.shortcut.get(&Shortcut::Capture).unwrap().to_string(), data.keycode_capture.clone()));
             }
     
             data.new_shortcut.clear();
@@ -348,6 +349,24 @@ associated with the action\n")).center();
         Label::new(""),
     ));
 
+    let row_alert2 = Flex::row().with_child(Either::new(
+        |data: &Screenshot, _: &Env| !data.shortcut_order && data.saved_shortcut,
+        Label::new("⚠️MODIFIERS MUST BE SET FIRST!⚠️").border(Color::RED, 2.).background(Color::BLACK).center(),
+        Label::new(""),
+    ));
+
+    let row_alert3 = Flex::row().with_child(Either::new(
+        |data: &Screenshot, _: &Env| !data.with_modifiers && data.saved_shortcut,
+        Label::new("⚠️AT LEAST ONE MODIFIER IS REQUIRED!⚠️").border(Color::RED, 2.).background(Color::BLACK).center(),
+        Label::new(""),
+    ));
+
+    let row_alert4 = Flex::row().with_child(Either::new(
+        |data: &Screenshot, _: &Env| !data.one_key && data.saved_shortcut,
+        Label::new("⚠️MAX ONE KEY CODE IS ALLOWED!⚠️").border(Color::RED, 2.).background(Color::BLACK).center(),
+        Label::new(""),
+    ));
+
     let mut row1 = Flex::row();
     row1.add_child(dropdown);
     row1.add_child(shortcut);
@@ -358,6 +377,9 @@ associated with the action\n")).center();
     col.add_child(row_save);
     col.add_default_spacer();
     col.add_child(row_alert);
-    col.controller(HotKeyController)
+    col.add_child(row_alert2);
+    col.add_child(row_alert3);
+    col.add_child(row_alert4);
+    col.controller(HotKeyController{flag: false, first: false})
 
 }

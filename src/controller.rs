@@ -11,6 +11,7 @@ use std::time::Duration;
 use druid::widget::Controller;
 use druid_shell::{TimerToken, Application};
 
+use crate::data::screenshot_derived_lenses::selected_shortcut;
 // use crate::data::write_derived_lenses::text;
 use crate::ui::*;
 use crate::data::*;
@@ -519,7 +520,10 @@ impl AppDelegate<Screenshot> for Delegate {
 
 }
 
-pub struct HotKeyController;
+pub struct HotKeyController{
+    pub flag: bool, //serve per ordine tra modifiers e tasti normali
+    pub first: bool,
+}
 
 impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotKeyController {
     fn event(
@@ -533,17 +537,48 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotKeyController {
         ctx.request_focus();
         if let Event::KeyDown(key) = event {
 
+            if data.new_shortcut == "".to_string(){
+                data.saved_shortcut = false;
+                data.shortcut_order = true;
+                data.with_modifiers = false;
+                data.one_key = true;
+                self.flag = false;
+                self.first = false;
+            }
             data.duplicate_shortcut = false;
-            data.saved_shortcut = false;
 
             let code = key.key.clone().to_string();
+            let code2 = key.code.clone().to_string();
 
             if code != data.prec_hotkey{
-                if data.prec_hotkey != "".to_string(){
+                if data.prec_hotkey != "".to_string(){  //controllo su pressione prolungata
                     data.new_shortcut.push_str("+");
                 }
                 data.new_shortcut.push_str(code.as_str());
                 data.prec_hotkey = code.clone();
+            }
+
+            if code != "Control".to_string() && code != "Alt".to_string() && code != "Shift".to_string(){
+
+                if self.first{
+                    data.one_key = false;
+                }
+                self.flag = true;
+                self.first = true;
+
+                if data.selected_shortcut == Shortcut::Screenshot{
+                    data.keycode_screen = code2;
+                }else if data.selected_shortcut == Shortcut::Capture{
+                    data.keycode_capture = code2;
+                }
+            }
+
+            if self.flag==true && (code == "Control".to_string() || code == "Alt".to_string() || code == "Shift".to_string()){
+                data.shortcut_order = false;
+            }
+
+            if code == "Control".to_string() || code == "Alt".to_string() || code == "Shift".to_string(){
+                data.with_modifiers = true;
             }
 
             let shortcut: Vec<&str> = data.new_shortcut.split("+").collect();
@@ -561,15 +596,74 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotKeyController {
                 data.duplicate_shortcut = true;
             }
 
+            if save.len() >= shortcut.len(){
+                if data.selected_shortcut!=Shortcut::Save && save.windows(shortcut.len()).any(|window| window == shortcut.as_slice()){
+                    data.duplicate_shortcut = true;
+                }
+            }else{
+                if data.selected_shortcut!=Shortcut::Save && shortcut.windows(save.len()).any(|window| window == save.as_slice()){
+                    data.duplicate_shortcut = true;
+                }
+            }
 
-            if data.shortcut.get(&Shortcut::Save).unwrap().contains(&data.new_shortcut) || data.new_shortcut.contains(data.shortcut.get(&Shortcut::Save).unwrap()) ||
-                data.shortcut.get(&Shortcut::SaveAs).unwrap().contains(&data.new_shortcut) || data.new_shortcut.contains(data.shortcut.get(&Shortcut::SaveAs).unwrap()) ||
-                data.shortcut.get(&Shortcut::Open).unwrap().contains(&data.new_shortcut) || data.new_shortcut.contains(data.shortcut.get(&Shortcut::Open).unwrap()) ||
-                data.shortcut.get(&Shortcut::Customize).unwrap().contains(&data.new_shortcut) || data.new_shortcut.contains(data.shortcut.get(&Shortcut::Customize).unwrap()) ||
-                data.shortcut.get(&Shortcut::Quit).unwrap().contains(&data.new_shortcut) || data.new_shortcut.contains(data.shortcut.get(&Shortcut::Quit).unwrap()) ||
-                data.shortcut.get(&Shortcut::Screenshot).unwrap().contains(&data.new_shortcut) || data.new_shortcut.contains(data.shortcut.get(&Shortcut::Screenshot).unwrap()) ||
-                data.shortcut.get(&Shortcut::Capture).unwrap().contains(&data.new_shortcut) || data.new_shortcut.contains(data.shortcut.get(&Shortcut::Capture).unwrap()){
-                data.duplicate_shortcut = true;
+            if save_as.len() >= shortcut.len(){
+                if data.selected_shortcut!=Shortcut::SaveAs && save_as.windows(shortcut.len()).any(|window| window == shortcut.as_slice()){
+                    data.duplicate_shortcut = true;
+                }
+            }else{
+                if data.selected_shortcut!=Shortcut::SaveAs && shortcut.windows(save_as.len()).any(|window| window == save_as.as_slice()){
+                    data.duplicate_shortcut = true;
+                }
+            }
+
+            if screenshot.len() >= shortcut.len(){
+                if data.selected_shortcut!=Shortcut::Screenshot && screenshot.windows(shortcut.len()).any(|window| window == shortcut.as_slice()){
+                    data.duplicate_shortcut = true;
+                }
+            }else{
+                if data.selected_shortcut!=Shortcut::Screenshot && shortcut.windows(screenshot.len()).any(|window| window == screenshot.as_slice()){
+                    data.duplicate_shortcut = true;
+                }
+            }
+
+            if capture.len() >= shortcut.len(){
+                if data.selected_shortcut!=Shortcut::Capture && capture.windows(shortcut.len()).any(|window| window == shortcut.as_slice()){
+                    data.duplicate_shortcut = true;
+                }
+            }else{
+                if data.selected_shortcut!=Shortcut::Capture && shortcut.windows(capture.len()).any(|window| window == capture.as_slice()){
+                    data.duplicate_shortcut = true;
+                }
+            }
+
+            if customize.len() >= shortcut.len(){
+                if data.selected_shortcut!=Shortcut::Customize && customize.windows(shortcut.len()).any(|window| window == shortcut.as_slice()){
+                    data.duplicate_shortcut = true;
+                }
+            }else{
+                if data.selected_shortcut!=Shortcut::Customize && shortcut.windows(customize.len()).any(|window| window == customize.as_slice()){
+                    data.duplicate_shortcut = true;
+                }
+            }
+
+            if open.len() >= shortcut.len(){
+                if data.selected_shortcut!=Shortcut::Open && open.windows(shortcut.len()).any(|window| window == shortcut.as_slice()){
+                    data.duplicate_shortcut = true;
+                }
+            }else{
+                if data.selected_shortcut!=Shortcut::Open && shortcut.windows(open.len()).any(|window| window == open.as_slice()){
+                    data.duplicate_shortcut = true;
+                }
+            }
+
+            if quit.len() >= shortcut.len(){
+                if data.selected_shortcut!=Shortcut::Quit && quit.windows(shortcut.len()).any(|window| window == shortcut.as_slice()){
+                    data.duplicate_shortcut = true;
+                }
+            }else{
+                if data.selected_shortcut!=Shortcut::Quit && shortcut.windows(quit.len()).any(|window| window == quit.as_slice()){
+                    data.duplicate_shortcut = true;
+                }
             }
 
         }
@@ -616,19 +710,29 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
         data: &mut Screenshot,
         _env: &Env,
     ) {
-        if self.flag == false{
-            println!("knksm");
-            self.timer = ctx.request_timer(Duration::from_millis(1 as u64));
-            self.flag= true;
-        }
+
         if data.flag_focus{
             ctx.request_focus();
         }
+
+        if self.flag == false{
+            self.timer = ctx.request_timer(Duration::from_millis(100 as u64));
+            self.flag= true;
+        }
+
         if let Event::Timer(id) = event{
-            println!("entrato");
+
             if self.timer == *id{
+
+                if ctx.window().get_window_state() != WindowState::Minimized{
+                    self.timer = ctx.request_timer(Duration::from_millis(100 as u64));
+                    if data.receiver_app.is_full(){
+                        let _mx = data.receiver_app.recv();
+                    }
+                    return;
+                }
+
                 if data.receiver_app.is_full(){
-                    // println!("dklwkdsw");
                     let mx = data.receiver_app.recv();
                     match mx{
                         Ok(mx) => {
@@ -642,10 +746,20 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
                     }
                 }
             }
-            self.flag=false;
+
+            self.timer = ctx.request_timer(Duration::from_millis(100 as u64));
         }
 
         if let Event::KeyDown(key) = event{
+
+            if ctx.window().get_window_state() == WindowState::Minimized{
+                return;
+            }
+
+            if data.receiver_app.is_full(){
+                let _mx = data.receiver_app.recv();
+            }
+
             self.code = key.key.clone().to_string();
             if self.code != self.prec{
                 if self.prec != "".to_string(){
@@ -665,9 +779,13 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
             let capture: Vec<&str> = data.shortcut.get(&Shortcut::Capture).unwrap().split("+").collect();
 
             if shortcut == screenshot{
-                data.action_screen(ctx)
+                data.new_shortcut.clear();
+                self.prec.clear();
+                data.action_screen(ctx);
             }else if shortcut == capture{
-                data.action_capture(ctx)
+                data.new_shortcut.clear();
+                self.prec.clear();
+                data.action_capture(ctx);
             }else if shortcut == save{
                 let image: ImageBuffer<image::Rgba<u8>, Vec<u8>> = ImageBuffer::from_vec(
                     data.img.width() as u32,
@@ -675,6 +793,9 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
                     data.img.raw_pixels().to_vec(),
                 )
                 .unwrap();
+
+                data.new_shortcut.clear();
+                self.prec.clear();
 
                 image
                     .save_with_format(
@@ -706,22 +827,26 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
                     .default_type(FileSpec::new("png", &["png"]))
                     .default_name(default_name);
 
+                data.new_shortcut.clear();
+                self.prec.clear();
                 ctx.submit_command(druid::commands::SHOW_SAVE_PANEL.with(save_dialog_options.clone()))
             }else if shortcut == open{
                 let open_dialog_options: FileDialogOptions = FileDialogOptions::new()
                 .select_directories()
                 .button_text("Open");
+
+                data.new_shortcut.clear();
+                self.prec.clear();
                 ctx.submit_command(druid::commands::SHOW_OPEN_PANEL.with(open_dialog_options.clone()))
             }else if shortcut == quit{
                 Application::global().quit();
             }else if shortcut == customize{
                 data.editing_shortcut = true;
-                data.new_shortcut = "".to_string();
+                data.new_shortcut.clear();
+                self.prec.clear();
                 ctx.submit_command(SHORTCUT)
             }
-
-
-        }
+        } 
 
         if let Event::KeyUp(_key) = event {
             data.new_shortcut.clear();

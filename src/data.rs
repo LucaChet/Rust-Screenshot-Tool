@@ -1154,12 +1154,29 @@ pub fn show_screen(
                 if index == data.circles.1{
                     break;
                 }
-                
-                let start_x = circle.start.x-data.resized_area.x;  //facciamo meno per riportare allo (0,0) quando facciamo capture
-                let start_y = circle.start.y-data.resized_area.y;
 
-                let w_original: f64 = (circle.end.x - circle.start.x).abs();
-                let h_original = (circle.end.y - circle.start.y).abs();
+                let mut new_startx = circle.start.x;
+                let mut new_starty = circle.start.y;
+                let mut new_endx = circle.end.x;
+                let mut new_endy = circle.end.y;
+
+                if circle.start.x > circle.end.x{
+                    let tmp = circle.start.x;
+                    new_startx = circle.end.x;
+                    new_endx = tmp.clone();
+                }
+
+                if circle.start.y > circle.end.y{
+                    let tmp = circle.start.y;
+                    new_starty = circle.end.y;
+                    new_endy = tmp.clone();
+                }
+                
+                let start_x = new_startx-data.resized_area.x;  //facciamo meno per riportare allo (0,0) quando facciamo capture
+                let start_y = new_starty-data.resized_area.y;
+
+                let w_original: f64 = (new_endx - new_startx).abs();
+                let h_original = (new_endy - new_starty).abs();
                 let scale_x = data.img.width() as f64 / data.resized_area.width;
                 let scale_y = data.img.height() as f64 / data.resized_area.height;
 
@@ -1189,12 +1206,29 @@ pub fn show_screen(
                 if index == data.squares.1{
                     break;
                 }
-                
-                let start_x = square.start.x-data.resized_area.x;
-                let start_y = square.start.y-data.resized_area.y;
 
-                let w_original: f64 = (square.end.x - square.start.x).abs();
-                let h_original = (square.end.y - square.start.y).abs();
+                let mut new_startx = square.start.x;
+                let mut new_starty = square.start.y;
+                let mut new_endx = square.end.x;
+                let mut new_endy = square.end.y;
+
+                if square.start.x > square.end.x{
+                    let tmp = square.start.x;
+                    new_startx = square.end.x;
+                    new_endx = tmp.clone();
+                }
+
+                if square.start.y > square.end.y{
+                    let tmp = square.start.y;
+                    new_starty = square.end.y;
+                    new_endy = tmp.clone();
+                }
+                
+                let start_x = new_startx-data.resized_area.x;
+                let start_y =new_starty-data.resized_area.y;
+
+                let w_original: f64 = (new_endx - new_startx).abs();
+                let h_original = (new_endy - new_starty).abs();
                 let scale_x = data.img.width() as f64 / data.resized_area.width;
                 let scale_y = data.img.height() as f64 / data.resized_area.height;
 

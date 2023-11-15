@@ -293,7 +293,7 @@ pub fn modify_shortcut() -> impl Widget<Screenshot> {
     let save = Either::new(|data, _: &Env| data.new_shortcut == "".to_string(),
         Label::new(""),
         Button::new("Save").on_click(|_ctx, data: &mut Screenshot, _env|{
-            if !data.duplicate_shortcut && data.shortcut_order && data.with_modifiers && data.one_key{
+            if !data.duplicate_shortcut && data.shortcut_order && data.with_modifiers && data.one_key && !data.dup_modifier{
                 match data.selected_shortcut{
                     Shortcut::Save => {
                         data.shortcut.entry(Shortcut::Save).and_modify(|el| *el = data.new_shortcut.clone());
@@ -367,6 +367,12 @@ associated with the action\n")).center();
         Label::new(""),
     ));
 
+    let row_alert5 = Flex::row().with_child(Either::new(
+        |data: &Screenshot, _: &Env| data.dup_modifier && data.saved_shortcut,
+        Label::new("MODIFIERS CANNOT BE DUPLICATED!⚠️").border(Color::RED, 2.).background(Color::BLACK).center(),
+        Label::new(""),
+    ));
+
     let mut row1 = Flex::row();
     row1.add_child(dropdown);
     row1.add_child(shortcut);
@@ -380,6 +386,7 @@ associated with the action\n")).center();
     col.add_child(row_alert2);
     col.add_child(row_alert3);
     col.add_child(row_alert4);
-    col.controller(HotKeyController{flag: false, first: false})
+    col.add_child(row_alert5);
+    col.controller(HotKeyController{flag: false, first: false, n_ctrl: 0, n_alt: 0, n_shift: 0})
 
 }

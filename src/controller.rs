@@ -523,6 +523,9 @@ impl AppDelegate<Screenshot> for Delegate {
 pub struct HotKeyController{
     pub flag: bool, //serve per ordine tra modifiers e tasti normali
     pub first: bool,
+    pub n_ctrl: usize,
+    pub n_alt: usize,
+    pub n_shift: usize,
 }
 
 impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotKeyController {
@@ -535,6 +538,23 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotKeyController {
         _env: &Env,
     ) {
         ctx.request_focus();
+
+        if let Event::WindowDisconnected = event{
+            data.saved_shortcut = false;
+            data.shortcut_order = true;
+            data.with_modifiers = false;
+            data.one_key = true;
+            data.dup_modifier = false;
+
+            self.flag = false;
+            self.first = false;
+            self.n_ctrl = 0;
+            self.n_alt = 0;
+            self.n_shift = 0;
+            
+            data.duplicate_shortcut = false;
+        }
+
         if let Event::KeyDown(key) = event {
 
             if data.new_shortcut == "".to_string(){
@@ -542,8 +562,13 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotKeyController {
                 data.shortcut_order = true;
                 data.with_modifiers = false;
                 data.one_key = true;
+                data.dup_modifier = false;
+
                 self.flag = false;
                 self.first = false;
+                self.n_ctrl = 0;
+                self.n_alt = 0;
+                self.n_shift = 0;
             }
             data.duplicate_shortcut = false;
 
@@ -579,6 +604,17 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotKeyController {
 
             if code == "Control".to_string() || code == "Alt".to_string() || code == "Shift".to_string(){
                 data.with_modifiers = true;
+                if code == "Control".to_string(){
+                    self.n_ctrl += 1;
+                }else if code == "Alt".to_string(){
+                    self.n_alt += 1;
+                }else if code == "Shift".to_string(){
+                    self.n_shift += 1;
+                }
+            }
+
+            if self.n_ctrl > 1 || self.n_alt > 1 || self.n_shift > 1{
+                data.dup_modifier = true;
             }
 
             let shortcut: Vec<&str> = data.new_shortcut.split("+").collect();

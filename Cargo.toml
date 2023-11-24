@@ -30,5 +30,5 @@ crossbeam = "0.8.2"
 livesplit-hotkey = "0.7.0"
 livesplit-core = "0.13.0"
 
-# [profile.dev]
-# overflow-checks = false
+[profile.dev]
+overflow-checks = false

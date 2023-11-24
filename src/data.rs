@@ -25,6 +25,9 @@ use crossbeam::channel::{bounded, Receiver as CrossReceiver, Sender as CrossSend
 use livesplit_hotkey::*;
 use livesplit_core::*;
 use std::str::FromStr;
+use crate::ui::*;
+
+// mod ui;
 
 #[derive(Clone, Data, PartialEq, Debug, Serialize, Deserialize)]
 pub enum Format {
@@ -197,6 +200,20 @@ impl Arrow {
 }
 
 #[derive(Clone, Data, Lens)]
+pub struct Highlighter{
+    pub start: Point,
+    pub end: Point,
+    pub color: Color,
+    pub thickness: f64,
+    pub alpha: f64,
+}
+impl Highlighter {
+    pub fn new()->Self{
+        Self { start: Point::new(0., 0.), end: Point::new(0., 0.), color: Color::WHITE, thickness: 1., alpha: 0.5 }
+    }
+}
+
+#[derive(Clone, Data, Lens)]
 pub struct Circle{
     pub start: Point,
     pub end: Point,
@@ -259,6 +276,7 @@ pub struct Screenshot {
     pub color_tool: ColorTool,
     pub shape_tool: ShapeTool,
     pub draw: Draw,
+    pub draw_high: (im::Vector<Highlighter>, usize),
     pub write: (im::Vector<Write>, usize),
     pub arrows: (im::Vector<Arrow>, usize),
     pub circles: (im::Vector<Circle>, usize),
@@ -302,6 +320,9 @@ impl Screenshot {
 
         let mut squares = im::Vector::new();
         squares.push_back(Square::new());
+
+        let mut highlighters = im::Vector::new();
+        highlighters.push_back(Highlighter::new());
         
         let cursor_image = ImageBuf::from_data(include_bytes!("./svg/icons8-pencil-48.png")).unwrap();
         // The (0,0) refers to where the "hotspot" is located, so where the mouse actually points.
@@ -424,6 +445,7 @@ impl Screenshot {
             color_tool: ColorTool::White,
             shape_tool: ShapeTool::Arrow,
             draw: Draw { points, segment: 0},
+            draw_high: (highlighters, 0),
             write: (text, 0),
             text: String::from(""),
             arrows: (arrows, 0),
@@ -590,6 +612,7 @@ impl Screenshot {
             .title(self.name.clone())
             .set_window_state(druid_shell::WindowState::Maximized)
             .set_always_on_top(true);
+            // .menu(menu);
         ctx.new_window(window);
     }
 
@@ -784,7 +807,7 @@ pub fn build_toolbar() -> impl Widget<Screenshot>{
     
 
     let pt_box = Stepper::new()
-        .with_range(0.0, 100.0)
+        .with_range(0.0, 25.0)
         .with_step(1.0)
         .lens(Screenshot::line_thickness);
 
@@ -795,7 +818,7 @@ pub fn build_toolbar() -> impl Widget<Screenshot>{
     let mut row_text = Flex::row();
     let textbox = Either::new(
         |data: &Screenshot, _| data.edit_tool == EditTool::Text,
-        TextBox::multiline()
+        TextBox::new()
         .with_placeholder("Insert text")
         .lens(Screenshot::text)
         .border(Color::BLACK, 2.),
@@ -914,7 +937,6 @@ pub fn build_toolbar() -> impl Widget<Screenshot>{
         shape_selector.border(Color::GRAY, 2.),
         Label::new("")
     );
-
 
     row_text.add_child(textbox);
     row_text.add_default_spacer();
@@ -1088,19 +1110,49 @@ pub fn show_screen(
                     for j in 0..(line.2*2.) as usize{
                         let p1 = imageproc::point::Point{x: ((line.0[i].x-data.resized_area.x)*scale_x+j as f64*normal.x) as i32, y: ((line.0[i].y-data.resized_area.y)*scale_y+j as f64*normal.y) as i32};
                         let p2 = imageproc::point::Point{x: ((line.0[i+1].x-data.resized_area.x)*scale_x+j as f64*normal.x) as i32, y: ((line.0[i+1].y-data.resized_area.y)*scale_y+j as f64*normal.y) as i32};
+
                         if p1 == p2{
                             continue;
                         }
                         points.push(p1);
                         points.push(p2);
                         
-                        drawing::draw_polygon_mut(&mut top_image, &points, rgba_col);
+                        drawing::draw_polygon_mut(&mut image1, &points, rgba_col);
                         points.clear();
                         // drawing::draw_line_segment_mut(&mut image1, ( ((line.0[i].x-data.resized_area.x)*scale_x+j as f64*normal.x) as f32, ((line.0[i].y-data.resized_area.y)*scale_y+j as f64*normal.y) as f32) , ( ((line.0[i+1].x-data.resized_area.x)*scale_x+j as f64*normal.x) as f32, ((line.0[i+1].y-data.resized_area.y)*scale_y+j as f64*normal.y) as f32), rgba_col);
                     }
                 }
-                image::imageops::overlay(&mut image1, &mut top_image, 0, 0);
             }
+
+            //draw highlighters
+            for (index, highlighters) in data.draw_high.0.clone().iter().enumerate(){
+
+                // println!("n: {}", index);
+
+                if index == data.draw_high.1{
+                    break;
+                }
+                
+                let start_x = highlighters.start.x-data.resized_area.x;
+                let start_y = highlighters.start.y-data.resized_area.y;
+                let end_x = highlighters.end.x-data.resized_area.x;
+                let end_y = highlighters.end.y-data.resized_area.y;
+                let scale_x = data.img.width() as f64 / data.resized_area.width;
+                let scale_y = data.img.height() as f64 / data.resized_area.height;
+                let alpha = highlighters.alpha;
+
+                let direction = (highlighters.end - highlighters.start).normalize(); // Calcola la direzione
+                let normal = druid::kurbo::Vec2::new(-direction.y, direction.x); 
+
+                let color = highlighters.color.with_alpha(alpha);
+                let rgba_col = Rgba([color.as_rgba8().0, color.as_rgba8().1, color.as_rgba8().2, color.as_rgba8().3]);
+
+                for i in 0..(highlighters.thickness as f64) as usize{
+                        drawing::draw_line_segment_mut(&mut top_image, ( ((start_x*scale_x)+i as f64*normal.x) as f32, ((start_y*scale_y)+i as f64*normal.y) as f32) , ( ((end_x*scale_x)+i as f64*normal.x) as f32, ((end_y*scale_y)+i as f64*normal.y) as f32), rgba_col);
+                        drawing::draw_line_segment_mut(&mut top_image, ( ((start_x*scale_x)-i as f64*normal.x) as f32, ((start_y*scale_y)-i as f64*normal.y) as f32) , ( ((end_x*scale_x)-i as f64*normal.x) as f32, ((end_y*scale_y)-i as f64*normal.y) as f32), rgba_col);
+                }    
+            }
+            image::imageops::overlay(&mut image1, &mut top_image, 0, 0);
 
             //draw arrows
             for (index, arrows) in data.arrows.0.clone().iter().enumerate(){
@@ -1278,6 +1330,10 @@ pub fn show_screen(
             data.draw.points.push_back((im::Vector::new(), Color::WHITE, 1., 1.));
             data.draw.segment = 0;
 
+            data.draw_high.0.clear();
+            data.draw_high.0.push_back(Highlighter::new());
+            data.draw_high.1 = 0;
+
             data.write.0.clear();
             data.write.0.push_back(Write::new());
             data.write.1 = 0;
@@ -1311,6 +1367,10 @@ pub fn show_screen(
             data.draw.points.clear();
             data.draw.points.push_back((im::Vector::new(), Color::WHITE, 1., 1.));
             data.draw.segment = 0;
+
+            data.draw_high.0.clear();
+            data.draw_high.0.push_back(Highlighter::new());
+            data.draw_high.1 = 0;
 
             data.write.0.clear();
             data.write.0.push_back(Write::new());
@@ -1368,6 +1428,8 @@ pub fn show_screen(
     col.add_default_spacer();
     
     col
+    // .controller(HotkeyScreen {code: String::from(""), prec: String::from(""), timer: TimerToken::next(), flag: false})
+    
 }
 
 pub fn draw_rect() -> impl Widget<Screenshot> {
@@ -1479,6 +1541,26 @@ pub fn manage_edit(data: &mut Screenshot) -> impl Widget<Screenshot>{
                 .build()
                 .unwrap();
                 ctx.draw_text(&text_layout, write.position);
+            }
+
+            //GESTIONE HIGHLIGHTER
+            let start = data.draw_high.0[data.draw_high.1].start;
+            let end = data.draw_high.0[data.draw_high.1].end;
+            let alpha = data.draw_high.0[data.draw_high.1].alpha;
+            
+            let mut path2 = druid::kurbo::BezPath::new();
+            path2.move_to(start);
+            path2.line_to(end);
+            ctx.stroke(path2, &color.with_alpha(alpha), data.line_thickness);
+            
+            for high in data.draw_high.0.clone(){
+                let start = high.start;
+                let end = high.end;
+                
+                let mut path2 = druid::kurbo::BezPath::new();
+                path2.move_to(start);
+                path2.line_to(end);
+                ctx.stroke(path2, &high.color.with_alpha(alpha), high.thickness);
             }
 
             //GESTIONE ARROW          

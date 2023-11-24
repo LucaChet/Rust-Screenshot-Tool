@@ -545,14 +545,15 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotKeyController {
             data.with_modifiers = false;
             data.one_key = true;
             data.dup_modifier = false;
+            data.prec_hotkey = String::from("");
+            data.new_shortcut = String::from("");
+            data.duplicate_shortcut = false;
 
             self.flag = false;
             self.first = false;
             self.n_ctrl = 0;
             self.n_alt = 0;
             self.n_shift = 0;
-            
-            data.duplicate_shortcut = false;
         }
 
         if let Event::KeyDown(key) = event {
@@ -581,126 +582,128 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotKeyController {
                 }
                 data.new_shortcut.push_str(code.as_str());
                 data.prec_hotkey = code.clone();
+
+                if code != "Control".to_string() && code != "Alt".to_string() && code != "Shift".to_string(){
+
+                    if self.first{
+                        data.one_key = false;
+                    }
+                    self.flag = true;
+                    self.first = true;
+
+                    if data.selected_shortcut == Shortcut::Screenshot{
+                        data.keycode_screen = code2;
+                    }else if data.selected_shortcut == Shortcut::Capture{
+                        data.keycode_capture = code2;
+                    }
+                }
+
+                if self.flag==true && (code == "Control".to_string() || code == "Alt".to_string() || code == "Shift".to_string()){
+                    data.shortcut_order = false;
+                }
+
+                if code == "Control".to_string() || code == "Alt".to_string() || code == "Shift".to_string(){
+                    data.with_modifiers = true;
+                    if code == "Control".to_string(){
+                        self.n_ctrl += 1;
+                    }else if code == "Alt".to_string(){
+                        self.n_alt += 1;
+                    }else if code == "Shift".to_string(){
+                        self.n_shift += 1;
+                    }
+                }
+
+                if self.n_ctrl > 1 || self.n_alt > 1 || self.n_shift > 1{
+                    data.dup_modifier = true;
+                    println!("OP OP OP");
+                }
+
+                let shortcut: Vec<&str> = data.new_shortcut.split("+").collect();
+
+                let save: Vec<&str> = data.shortcut.get(&Shortcut::Save).unwrap().split("+").collect();
+                let save_as: Vec<&str> = data.shortcut.get(&Shortcut::SaveAs).unwrap().split("+").collect();
+                let open: Vec<&str> = data.shortcut.get(&Shortcut::Open).unwrap().split("+").collect();
+                let customize: Vec<&str> = data.shortcut.get(&Shortcut::Customize).unwrap().split("+").collect();
+                let quit: Vec<&str> = data.shortcut.get(&Shortcut::Quit).unwrap().split("+").collect();
+                let screenshot: Vec<&str> = data.shortcut.get(&Shortcut::Screenshot).unwrap().split("+").collect();
+                let capture: Vec<&str> = data.shortcut.get(&Shortcut::Capture).unwrap().split("+").collect();
+
+                if shortcut == save || shortcut == save_as || shortcut == open || shortcut == quit || shortcut == customize ||
+                    shortcut == screenshot || shortcut == capture{
+                    data.duplicate_shortcut = true;
+                }
+
+                if save.len() >= shortcut.len(){
+                    if data.selected_shortcut!=Shortcut::Save && save.windows(shortcut.len()).any(|window| window == shortcut.as_slice()){
+                        data.duplicate_shortcut = true;
+                    }
+                }else{
+                    if data.selected_shortcut!=Shortcut::Save && shortcut.windows(save.len()).any(|window| window == save.as_slice()){
+                        data.duplicate_shortcut = true;
+                    }
+                }
+
+                if save_as.len() >= shortcut.len(){
+                    if data.selected_shortcut!=Shortcut::SaveAs && save_as.windows(shortcut.len()).any(|window| window == shortcut.as_slice()){
+                        data.duplicate_shortcut = true;
+                    }
+                }else{
+                    if data.selected_shortcut!=Shortcut::SaveAs && shortcut.windows(save_as.len()).any(|window| window == save_as.as_slice()){
+                        data.duplicate_shortcut = true;
+                    }
+                }
+
+                if screenshot.len() >= shortcut.len(){
+                    if data.selected_shortcut!=Shortcut::Screenshot && screenshot.windows(shortcut.len()).any(|window| window == shortcut.as_slice()){
+                        data.duplicate_shortcut = true;
+                    }
+                }else{
+                    if data.selected_shortcut!=Shortcut::Screenshot && shortcut.windows(screenshot.len()).any(|window| window == screenshot.as_slice()){
+                        data.duplicate_shortcut = true;
+                    }
+                }
+
+                if capture.len() >= shortcut.len(){
+                    if data.selected_shortcut!=Shortcut::Capture && capture.windows(shortcut.len()).any(|window| window == shortcut.as_slice()){
+                        data.duplicate_shortcut = true;
+                    }
+                }else{
+                    if data.selected_shortcut!=Shortcut::Capture && shortcut.windows(capture.len()).any(|window| window == capture.as_slice()){
+                        data.duplicate_shortcut = true;
+                    }
+                }
+
+                if customize.len() >= shortcut.len(){
+                    if data.selected_shortcut!=Shortcut::Customize && customize.windows(shortcut.len()).any(|window| window == shortcut.as_slice()){
+                        data.duplicate_shortcut = true;
+                    }
+                }else{
+                    if data.selected_shortcut!=Shortcut::Customize && shortcut.windows(customize.len()).any(|window| window == customize.as_slice()){
+                        data.duplicate_shortcut = true;
+                    }
+                }
+
+                if open.len() >= shortcut.len(){
+                    if data.selected_shortcut!=Shortcut::Open && open.windows(shortcut.len()).any(|window| window == shortcut.as_slice()){
+                        data.duplicate_shortcut = true;
+                    }
+                }else{
+                    if data.selected_shortcut!=Shortcut::Open && shortcut.windows(open.len()).any(|window| window == open.as_slice()){
+                        data.duplicate_shortcut = true;
+                    }
+                }
+
+                if quit.len() >= shortcut.len(){
+                    if data.selected_shortcut!=Shortcut::Quit && quit.windows(shortcut.len()).any(|window| window == shortcut.as_slice()){
+                        data.duplicate_shortcut = true;
+                    }
+                }else{
+                    if data.selected_shortcut!=Shortcut::Quit && shortcut.windows(quit.len()).any(|window| window == quit.as_slice()){
+                        data.duplicate_shortcut = true;
+                    }
+                }
             }
 
-            if code != "Control".to_string() && code != "Alt".to_string() && code != "Shift".to_string(){
-
-                if self.first{
-                    data.one_key = false;
-                }
-                self.flag = true;
-                self.first = true;
-
-                if data.selected_shortcut == Shortcut::Screenshot{
-                    data.keycode_screen = code2;
-                }else if data.selected_shortcut == Shortcut::Capture{
-                    data.keycode_capture = code2;
-                }
-            }
-
-            if self.flag==true && (code == "Control".to_string() || code == "Alt".to_string() || code == "Shift".to_string()){
-                data.shortcut_order = false;
-            }
-
-            if code == "Control".to_string() || code == "Alt".to_string() || code == "Shift".to_string(){
-                data.with_modifiers = true;
-                if code == "Control".to_string(){
-                    self.n_ctrl += 1;
-                }else if code == "Alt".to_string(){
-                    self.n_alt += 1;
-                }else if code == "Shift".to_string(){
-                    self.n_shift += 1;
-                }
-            }
-
-            if self.n_ctrl > 1 || self.n_alt > 1 || self.n_shift > 1{
-                data.dup_modifier = true;
-            }
-
-            let shortcut: Vec<&str> = data.new_shortcut.split("+").collect();
-
-            let save: Vec<&str> = data.shortcut.get(&Shortcut::Save).unwrap().split("+").collect();
-            let save_as: Vec<&str> = data.shortcut.get(&Shortcut::SaveAs).unwrap().split("+").collect();
-            let open: Vec<&str> = data.shortcut.get(&Shortcut::Open).unwrap().split("+").collect();
-            let customize: Vec<&str> = data.shortcut.get(&Shortcut::Customize).unwrap().split("+").collect();
-            let quit: Vec<&str> = data.shortcut.get(&Shortcut::Quit).unwrap().split("+").collect();
-            let screenshot: Vec<&str> = data.shortcut.get(&Shortcut::Screenshot).unwrap().split("+").collect();
-            let capture: Vec<&str> = data.shortcut.get(&Shortcut::Capture).unwrap().split("+").collect();
-
-            if shortcut == save || shortcut == save_as || shortcut == open || shortcut == quit || shortcut == customize ||
-                shortcut == screenshot || shortcut == capture{
-                data.duplicate_shortcut = true;
-            }
-
-            if save.len() >= shortcut.len(){
-                if data.selected_shortcut!=Shortcut::Save && save.windows(shortcut.len()).any(|window| window == shortcut.as_slice()){
-                    data.duplicate_shortcut = true;
-                }
-            }else{
-                if data.selected_shortcut!=Shortcut::Save && shortcut.windows(save.len()).any(|window| window == save.as_slice()){
-                    data.duplicate_shortcut = true;
-                }
-            }
-
-            if save_as.len() >= shortcut.len(){
-                if data.selected_shortcut!=Shortcut::SaveAs && save_as.windows(shortcut.len()).any(|window| window == shortcut.as_slice()){
-                    data.duplicate_shortcut = true;
-                }
-            }else{
-                if data.selected_shortcut!=Shortcut::SaveAs && shortcut.windows(save_as.len()).any(|window| window == save_as.as_slice()){
-                    data.duplicate_shortcut = true;
-                }
-            }
-
-            if screenshot.len() >= shortcut.len(){
-                if data.selected_shortcut!=Shortcut::Screenshot && screenshot.windows(shortcut.len()).any(|window| window == shortcut.as_slice()){
-                    data.duplicate_shortcut = true;
-                }
-            }else{
-                if data.selected_shortcut!=Shortcut::Screenshot && shortcut.windows(screenshot.len()).any(|window| window == screenshot.as_slice()){
-                    data.duplicate_shortcut = true;
-                }
-            }
-
-            if capture.len() >= shortcut.len(){
-                if data.selected_shortcut!=Shortcut::Capture && capture.windows(shortcut.len()).any(|window| window == shortcut.as_slice()){
-                    data.duplicate_shortcut = true;
-                }
-            }else{
-                if data.selected_shortcut!=Shortcut::Capture && shortcut.windows(capture.len()).any(|window| window == capture.as_slice()){
-                    data.duplicate_shortcut = true;
-                }
-            }
-
-            if customize.len() >= shortcut.len(){
-                if data.selected_shortcut!=Shortcut::Customize && customize.windows(shortcut.len()).any(|window| window == shortcut.as_slice()){
-                    data.duplicate_shortcut = true;
-                }
-            }else{
-                if data.selected_shortcut!=Shortcut::Customize && shortcut.windows(customize.len()).any(|window| window == customize.as_slice()){
-                    data.duplicate_shortcut = true;
-                }
-            }
-
-            if open.len() >= shortcut.len(){
-                if data.selected_shortcut!=Shortcut::Open && open.windows(shortcut.len()).any(|window| window == shortcut.as_slice()){
-                    data.duplicate_shortcut = true;
-                }
-            }else{
-                if data.selected_shortcut!=Shortcut::Open && shortcut.windows(open.len()).any(|window| window == open.as_slice()){
-                    data.duplicate_shortcut = true;
-                }
-            }
-
-            if quit.len() >= shortcut.len(){
-                if data.selected_shortcut!=Shortcut::Quit && quit.windows(shortcut.len()).any(|window| window == shortcut.as_slice()){
-                    data.duplicate_shortcut = true;
-                }
-            }else{
-                if data.selected_shortcut!=Shortcut::Quit && shortcut.windows(quit.len()).any(|window| window == quit.as_slice()){
-                    data.duplicate_shortcut = true;
-                }
-            }
 
         }
         child.event(ctx, event, data, _env);
@@ -931,23 +934,16 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
         data: &mut Screenshot,
         _env: &Env,
     ) {
-        if data.edit_tool == EditTool::Pencil || data.edit_tool == EditTool::Highlighter{
+        if data.edit_tool == EditTool::Pencil{
             // ctx.set_cursor(&Cursor::Arrow);
             match event {
                 Event::MouseDown(_mouse_event) => {
                     ctx.set_active(true);
 
-                    if data.edit_tool == EditTool::Pencil{
-                        let cursor_image = ImageBuf::from_data(include_bytes!("./svg/icons8-pencil-48.png")).unwrap();
-                        data.custom_cursor_desc = CursorDesc::new(cursor_image, (0.0, 48.0));
-                        data.custom_cursor = ctx.window().make_cursor(&data.custom_cursor_desc).unwrap_or(Cursor::Crosshair);
-                        ctx.set_cursor(&data.custom_cursor);
-                    }else if data.edit_tool == EditTool::Highlighter{
-                        let cursor_image = ImageBuf::from_data(include_bytes!("./svg/icons8-highlighter-48.png")).unwrap();
-                        data.custom_cursor_desc = CursorDesc::new(cursor_image, (0., 48.0));
-                        data.custom_cursor = ctx.window().make_cursor(&data.custom_cursor_desc).unwrap_or(Cursor::Crosshair);
-                        ctx.set_cursor(&data.custom_cursor);
-                    }
+                    let cursor_image = ImageBuf::from_data(include_bytes!("./svg/icons8-pencil-48.png")).unwrap();
+                    data.custom_cursor_desc = CursorDesc::new(cursor_image, (0.0, 48.0));
+                    data.custom_cursor = ctx.window().make_cursor(&data.custom_cursor_desc).unwrap_or(Cursor::Crosshair);
+                    ctx.set_cursor(&data.custom_cursor);
 
                     let color = match data.color_tool{
                         ColorTool::Black => Color::BLACK,
@@ -957,14 +953,19 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
                         ColorTool::White => Color::WHITE,
                         ColorTool::Green => Color::GREEN,
                     };
-                    if data.edit_tool == EditTool::Highlighter {
-                        data.draw.points[data.draw.segment].3 = 0.5;
-                    }
-                    else {
-                        data.draw.points[data.draw.segment].3 = 1.;
-                    }
+                    
+                    
+                    data.draw.points[data.draw.segment].3 = 1.;
+                    
                     data.draw.points[data.draw.segment].1 = color;
+
                     data.draw.points[data.draw.segment].2 = data.line_thickness;
+
+                    if data.line_thickness > 4.{
+                        data.draw.points[data.draw.segment].2 = 4.;
+                        data.line_thickness = 4.;
+                    }
+                    
                     self.flag_drawing = true;
                 },
                 Event::MouseMove(mouse_event) => {
@@ -974,18 +975,53 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
                 },
                 Event::MouseUp(_mouse_event) => {
                     ctx.set_active(false);
-                    if data.edit_tool == EditTool::Highlighter {
-                        data.draw.points.push_back((im::Vector::new(), Color::WHITE, 1., 0.5));
-                    }
-                    else {
-                        data.draw.points.push_back((im::Vector::new(), Color::WHITE, 1., 1.));
-                    }
+                    
+                    data.draw.points.push_back((im::Vector::new(), Color::WHITE, 1., 1.));
+                    
                     data.draw.segment += 1;
                     self.flag_drawing = false;
                     ctx.set_cursor(&Cursor::Arrow);
 
                 },
                 _ => ()
+            }
+        }
+        else if data.edit_tool == EditTool::Highlighter{
+            match event{
+                Event::MouseDown(mouse_event) => {
+                    ctx.set_active(true);
+                    let color = match data.color_tool{
+                        ColorTool::Black => Color::BLACK,
+                        ColorTool::Red => Color::RED,
+                        ColorTool::Blue => Color::BLUE,
+                        ColorTool::Yellow => Color::YELLOW,
+                        ColorTool::White => Color::WHITE,
+                        ColorTool::Green => Color::GREEN,
+                    };
+
+                    let cursor_image = ImageBuf::from_data(include_bytes!("./svg/icons8-highlighter-48.png")).unwrap();
+                    data.custom_cursor_desc = CursorDesc::new(cursor_image, (0., 48.0));
+                    data.custom_cursor = ctx.window().make_cursor(&data.custom_cursor_desc).unwrap_or(Cursor::Crosshair);
+                    ctx.set_cursor(&data.custom_cursor);
+
+                    data.draw_high.0[data.draw_high.1].start = mouse_event.pos;
+                    data.draw_high.0[data.draw_high.1].end = mouse_event.pos;
+                    data.draw_high.0[data.draw_high.1].color = color;
+                    data.draw_high.0[data.draw_high.1].thickness = data.line_thickness;
+                    data.draw_high.0[data.draw_high.1].alpha = 0.5;
+                    
+                }
+                Event::MouseMove(mouse_event) => {
+                    if ctx.is_active() && is_in_image(mouse_event.pos, data) {
+                        data.draw_high.0[data.draw_high.1].end = mouse_event.pos;
+                    }
+                }
+                Event::MouseUp(_mouse_event) => {
+                    ctx.set_active(false);
+                    data.draw_high.0.push_back(Highlighter::new());
+                    data.draw_high.1 += 1;
+                }
+                _ => {}
             }
         }
         else if data.edit_tool == EditTool::Text{
@@ -1160,6 +1196,17 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
                                 if mouse_event.pos.distance(point) < 10. { //if an intersection is found, remove the entire track from the draw
                                     data.draw.points.remove(index);
                                     data.draw.segment -= 1;
+                                    break;
+                                }
+                            }
+                        }
+
+                         //erase highlighters
+                         for (index, high) in data.draw_high.0.clone().iter().enumerate(){
+                            for p in arrow_body_points(high.start, high.end) {
+                                if mouse_event.pos.distance(p) < 10. {
+                                    data.draw_high.0.remove(index);
+                                    data.draw_high.1 -= 1;
                                     break;
                                 }
                             }

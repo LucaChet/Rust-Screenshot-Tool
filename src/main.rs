@@ -4,17 +4,11 @@ use data::{Format, Screenshot};
 use controller::*;
 
 use druid::{WindowDesc, AppLauncher, theme::{BUTTON_DARK, BUTTON_LIGHT, WINDOW_BACKGROUND_COLOR}, Color};
-// use saver::read_stored;
 use ui::{ui_builder, menu};
 
 mod ui;
 mod data;
 mod controller;
-// mod saver;
-
-// commentino molesto
-//ciao
-
 
 fn main() {
     //finestra principale che si apre quando lancio il programma

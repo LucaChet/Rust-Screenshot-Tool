@@ -1,18 +1,17 @@
 use druid::{
     widget::{
-        Stepper, Button, Container, Either, FillStrat, Flex, Image, Painter, SizedBox, ZStack, Label, TextBox, Align,
+        Stepper, Button, Container, Either, FillStrat, Flex, Image, Painter, SizedBox, ZStack, Label, TextBox,
     },
     FontFamily, Color, Data, Env, EventCtx, ImageBuf, Lens,
     PaintCtx, Point, RenderContext, TimerToken,
-    Widget, WidgetExt, WindowDesc, WindowState, Rect, Cursor, CursorDesc,
+    Widget, WidgetExt, WindowDesc, WindowState, Cursor, CursorDesc,
 };
-use druid_shell::Scale;
-use im::HashMap;
-use image::{ImageBuffer, Rgba, DynamicImage, Pixel};
-use imageproc::{*, integral_image::ArrayData};
 
-use piet::InterpolationMode;
-use piet_common::{/*D2DTextLayout, */Text, TextLayoutBuilder};
+use im::HashMap;
+use image::{ImageBuffer, Rgba, DynamicImage};
+use imageproc::drawing;
+
+use piet_common::{Text, TextLayoutBuilder};
 use crate::controller::*;
 use arboard::Clipboard;
 use arboard::ImageData;
@@ -20,10 +19,8 @@ use screenshots::Screen;
 use serde::{Deserialize, Serialize};
 use std::{borrow::Cow, hash::Hash};
 use rusttype::*;
-use std::sync::mpsc::{channel, Sender, Receiver};
-use crossbeam::channel::{bounded, Receiver as CrossReceiver, Sender as CrossSender};
-use livesplit_hotkey::*;
-use livesplit_core::*;
+use std::sync::mpsc::{channel, Sender};
+use crossbeam::channel::{bounded, Receiver as CrossReceiver};
 use std::str::FromStr;
 use crate::ui::*;
 
@@ -982,9 +979,6 @@ pub fn show_screen(
     data: &mut Screenshot,
 ) -> impl Widget<Screenshot> {
     data.flag_edit = false;
-    // data.draw.points.clear();
-    // data.draw.points.push_back((im::Vector::new(), Color::WHITE, 1., 1.));
-    // data.draw.segment = 0;
     data.flag_resize = false;
     data.reset_resize_rect();
     let original_x = data.resized_area.x;
@@ -1482,9 +1476,9 @@ pub fn draw_resize(data: &Screenshot) -> impl Widget<Screenshot>{
     })
 }
 
-pub fn manage_edit(data: &mut Screenshot) -> impl Widget<Screenshot>{
+pub fn manage_edit(_data: &mut Screenshot) -> impl Widget<Screenshot>{
 
-    let paint = Painter::new(move |ctx: &mut PaintCtx<'_, '_, '_>, data: &Screenshot, env| {
+    let paint = Painter::new(move |ctx: &mut PaintCtx<'_, '_, '_>, data: &Screenshot, _env| {
         
             //GESTIONE DRAW
             let color = match data.color_tool{

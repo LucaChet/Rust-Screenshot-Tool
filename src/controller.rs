@@ -1,23 +1,17 @@
-use crossbeam::epoch::Pointable;
 use druid::{
     FileDialogOptions, Selector, WindowDesc, commands, AppDelegate, Code, Command, Cursor, DelegateCtx, Env, Event, EventCtx
     ,Handled, LocalizedString, MouseButton, Point, Target, Widget, Color,
     WindowState, CursorDesc, ImageBuf, FileSpec
 };
-use druid_shell::Scale;
-use kurbo::BezPath;
+
 use std::time::Duration;
 
 use druid::widget::Controller;
 use druid_shell::{TimerToken, Application};
 
-use crate::data::screenshot_derived_lenses::selected_shortcut;
-// use crate::data::write_derived_lenses::text;
 use crate::ui::*;
 use crate::data::*;
 use image::*;
-use imageproc::{*, integral_image::ArrayData};
-use screenshots::Screen;
 pub const SHORTCUT: Selector = Selector::new("shortcut_selector");
 pub struct SetScreen;
 
@@ -762,14 +756,14 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
         if let Event::Timer(id) = event{
 
             if self.timer == *id{
-
-                if ctx.window().get_window_state() != WindowState::Minimized{
-                    self.timer = ctx.request_timer(Duration::from_millis(100 as u64));
-                    if data.receiver_app.is_full(){
-                        let _mx = data.receiver_app.recv();
-                    }
-                    return;
-                }
+                
+                // if ctx.window().get_window_state() != WindowState::Minimized{
+                //     self.timer = ctx.request_timer(Duration::from_millis(100 as u64));
+                //     if data.receiver_app.is_full(){
+                //         let _mx = data.receiver_app.recv();
+                //     }
+                //     return;
+                // }
 
                 if data.receiver_app.is_full(){
                     let mx = data.receiver_app.recv();
@@ -791,13 +785,13 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
 
         if let Event::KeyDown(key) = event{
 
-            if ctx.window().get_window_state() == WindowState::Minimized{
-                return;
-            }
+            // if ctx.window().get_window_state() == WindowState::Minimized{
+            //     return;
+            // }
 
-            if data.receiver_app.is_full(){
-                let _mx = data.receiver_app.recv();
-            }
+            // if data.receiver_app.is_full(){
+            //     let _mx = data.receiver_app.recv();
+            // }
 
             self.code = key.key.clone().to_string();
             if self.code != self.prec{
@@ -814,18 +808,19 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
             let open: Vec<&str> = data.shortcut.get(&Shortcut::Open).unwrap().split("+").collect();
             let customize: Vec<&str> = data.shortcut.get(&Shortcut::Customize).unwrap().split("+").collect();
             let quit: Vec<&str> = data.shortcut.get(&Shortcut::Quit).unwrap().split("+").collect();
-            let screenshot: Vec<&str> = data.shortcut.get(&Shortcut::Screenshot).unwrap().split("+").collect();
-            let capture: Vec<&str> = data.shortcut.get(&Shortcut::Capture).unwrap().split("+").collect();
+            // let screenshot: Vec<&str> = data.shortcut.get(&Shortcut::Screenshot).unwrap().split("+").collect();
+            // let capture: Vec<&str> = data.shortcut.get(&Shortcut::Capture).unwrap().split("+").collect();
 
-            if shortcut == screenshot{
-                data.new_shortcut.clear();
-                self.prec.clear();
-                data.action_screen(ctx);
-            }else if shortcut == capture{
-                data.new_shortcut.clear();
-                self.prec.clear();
-                data.action_capture(ctx);
-            }else if shortcut == save{
+            // if shortcut == screenshot{
+            //     data.new_shortcut.clear();
+            //     self.prec.clear();
+            //     data.action_screen(ctx);
+            // }else if shortcut == capture{
+            //     data.new_shortcut.clear();
+            //     self.prec.clear();
+            //     data.action_capture(ctx);
+            // }else 
+            if shortcut == save{
                 let image: ImageBuffer<image::Rgba<u8>, Vec<u8>> = ImageBuffer::from_vec(
                     data.img.width() as u32,
                     data.img.height() as u32,
@@ -1250,6 +1245,30 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
                 _ => ()
             }
         }
+
+        child.event(ctx, event, data, _env);
+    }
+
+    fn lifecycle(
+        &mut self,
+        child: &mut W,
+        ctx: &mut druid::LifeCycleCtx,
+        event: &druid::LifeCycle,
+        data: &Screenshot,
+        env: &Env,
+    ) {
+        child.lifecycle(ctx, event, data, env)
+    }
+
+    fn update(
+        &mut self,
+        child: &mut W,
+        ctx: &mut druid::UpdateCtx,
+        old_data: &Screenshot,
+        data: &Screenshot,
+        env: &Env,
+    ) {
+        child.update(ctx, old_data, data, env)
     }
 
 }

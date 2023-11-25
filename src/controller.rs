@@ -13,47 +13,9 @@ use crate::ui::*;
 use crate::data::*;
 use image::*;
 pub const SHORTCUT: Selector = Selector::new("shortcut_selector");
-pub struct SetScreen;
-
-impl<W: Widget<Screenshot>> Controller<Screenshot, W> for SetScreen {
-    fn event(
-        &mut self,
-        child: &mut W,
-        ctx: &mut druid::EventCtx,
-        event: &druid::Event,
-        data: &mut Screenshot,
-        env: &Env,
-    ) {
-        data.area.start = Point::new(0.0, 0.0);
-        data.area.end = Point::new(0.0, 0.0);
-        child.event(ctx, event, data, env);
-    }
-
-    fn lifecycle(
-        &mut self,
-        child: &mut W,
-        ctx: &mut druid::LifeCycleCtx,
-        event: &druid::LifeCycle,
-        data: &Screenshot,
-        env: &Env,
-    ) {
-        child.lifecycle(ctx, event, data, env)
-    }
-
-    fn update(
-        &mut self,
-        child: &mut W,
-        ctx: &mut druid::UpdateCtx,
-        old_data: &Screenshot,
-        data: &Screenshot,
-        env: &Env,
-    ) {
-        child.update(ctx, old_data, data, env)
-    }
-}
 
 pub struct Enter;
-
+//controller che gestisce la modica del nome alla pressione del tasto invio
 impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Enter {
     fn event(
         &mut self,
@@ -63,7 +25,6 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Enter {
         data: &mut Screenshot,
         env: &Env,
     ) {
-        // ctx.request_focus();
         
         if let Event::KeyUp(key) = event {
             if key.code == Code::Enter {
@@ -134,7 +95,6 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
                         let start_point = mouse_event.pos;
 
                         ctx.set_active(true);
-                        // ctx.set_handled();
 
                         // Memorizza il punto iniziale
                         data.area.start = start_point;
@@ -157,7 +117,6 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
                         self.t1 = ctx.request_timer(Duration::from_millis(500));
 
                         ctx.set_active(false);
-                        // ctx.set_handled();
 
                         // Calcola il punto finale del trascinamento
                         let end_point = mouse_event.pos;
@@ -756,15 +715,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
         if let Event::Timer(id) = event{
 
             if self.timer == *id{
-                
-                // if ctx.window().get_window_state() != WindowState::Minimized{
-                //     self.timer = ctx.request_timer(Duration::from_millis(100 as u64));
-                //     if data.receiver_app.is_full(){
-                //         let _mx = data.receiver_app.recv();
-                //     }
-                //     return;
-                // }
-
+            
                 if data.receiver_app.is_full(){
                     let mx = data.receiver_app.recv();
                     match mx{
@@ -785,14 +736,6 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
 
         if let Event::KeyDown(key) = event{
 
-            // if ctx.window().get_window_state() == WindowState::Minimized{
-            //     return;
-            // }
-
-            // if data.receiver_app.is_full(){
-            //     let _mx = data.receiver_app.recv();
-            // }
-
             self.code = key.key.clone().to_string();
             if self.code != self.prec{
                 if self.prec != "".to_string(){
@@ -808,18 +751,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
             let open: Vec<&str> = data.shortcut.get(&Shortcut::Open).unwrap().split("+").collect();
             let customize: Vec<&str> = data.shortcut.get(&Shortcut::Customize).unwrap().split("+").collect();
             let quit: Vec<&str> = data.shortcut.get(&Shortcut::Quit).unwrap().split("+").collect();
-            // let screenshot: Vec<&str> = data.shortcut.get(&Shortcut::Screenshot).unwrap().split("+").collect();
-            // let capture: Vec<&str> = data.shortcut.get(&Shortcut::Capture).unwrap().split("+").collect();
-
-            // if shortcut == screenshot{
-            //     data.new_shortcut.clear();
-            //     self.prec.clear();
-            //     data.action_screen(ctx);
-            // }else if shortcut == capture{
-            //     data.new_shortcut.clear();
-            //     self.prec.clear();
-            //     data.action_capture(ctx);
-            // }else 
+         
             if shortcut == save{
                 let image: ImageBuffer<image::Rgba<u8>, Vec<u8>> = ImageBuffer::from_vec(
                     data.img.width() as u32,
@@ -930,7 +862,6 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
         _env: &Env,
     ) {
         if data.edit_tool == EditTool::Pencil{
-            // ctx.set_cursor(&Cursor::Arrow);
             match event {
                 Event::MouseDown(_mouse_event) => {
                     ctx.set_active(true);
@@ -1074,7 +1005,6 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
 
                 }
                 Event::MouseUp(_ev) => {
-                    // data.editing_text = -1;
                     ctx.set_cursor(&Cursor::Arrow);
                     ctx.set_active(false);
                 }
@@ -1227,7 +1157,6 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
                             }
                         }
 
-
                         //erase circles
                         for(index, circle_sq) in data.circles.0.clone().iter().enumerate(){
                             if is_in_square(mouse_event.pos, circle_sq.start, circle_sq.end){
@@ -1279,7 +1208,6 @@ fn is_in_image(point: Point, data: &Screenshot) -> bool{
     point.x <= data.resized_area.x + data.resized_area.width &&
     point.y <= data.resized_area.y + data.resized_area.height
 }
-
 
 fn is_in_square(point: Point, square_start: Point, square_end: Point) -> bool{
     let p0 = Point::new(min(square_start.x, square_end.x), min(square_start.y, square_end.y));

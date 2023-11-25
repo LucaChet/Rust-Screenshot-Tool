@@ -1,4 +1,3 @@
-
 use druid::widget::{
     Button, CrossAxisAlignment, Either, Flex, FlexParams, Label, Padding,
     Stepper, TextBox, ZStack,
@@ -17,9 +16,6 @@ use image::ImageBuffer;
 use crate::controller::*;
 use crate::data::*;
 
-// use crate::saver::Saver;
-
-//albero
 pub fn ui_builder() -> impl Widget<Screenshot> {
     let mut col = Flex::column().with_child(
         Flex::row()
@@ -55,8 +51,6 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
 
     let mut row = Flex::row();
 
-
-
     let gestisci_screen = Either::new(
         |data: &Screenshot, _: &Env| data.screen_fatto,
         Button::new("Gestisci screen").on_click(
@@ -83,7 +77,6 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
         }),
     );
 
-
     let button_modifica = Either::new(
         |data: &Screenshot, _: &Env| data.screen_fatto,
         Button::new("Modifica nome").on_click(|ctx: &mut EventCtx, data: &mut Screenshot, _env| {
@@ -92,9 +85,11 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
             }else{
                 data.flag_focus = true;
             }
-            data.name = data.new_name.clone();
-            data.new_name = "".to_string();
-            Screenshot::toggle_textbox_state(data);
+            if data.new_name.trim() != "" {
+                data.name = data.new_name.clone();
+                data.new_name = "".to_string();
+                Screenshot::toggle_textbox_state(data);
+            }
             ctx.request_update();
         }),
         Label::new(""),
@@ -103,9 +98,6 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
     row.add_child(screen_name);
     row.add_child(button_modifica);
     row.add_child(gestisci_screen);
-
-    // let mut row2 = Flex::row();
-    // row2.add_child(dropdown);
     col.add_default_spacer();
 
     ZStack::new(col.with_flex_child(row, FlexParams::new(1.0, CrossAxisAlignment::Start)))
@@ -390,3 +382,4 @@ associated with the action\n")).center();
     col.controller(HotKeyController{flag: false, first: false, n_ctrl: 0, n_alt: 0, n_shift: 0})
 
 }
+

@@ -6,11 +6,9 @@ use druid::{
     PaintCtx, Point, RenderContext, TimerToken,
     Widget, WidgetExt, WindowDesc, WindowState, Cursor, CursorDesc,
 };
-
 use im::HashMap;
 use image::{ImageBuffer, Rgba, DynamicImage};
 use imageproc::drawing;
-
 use piet_common::{Text, TextLayoutBuilder};
 use crate::controller::*;
 use arboard::Clipboard;
@@ -22,9 +20,7 @@ use rusttype::*;
 use std::sync::mpsc::{channel, Sender};
 use crossbeam::channel::{bounded, Receiver as CrossReceiver};
 use std::str::FromStr;
-use crate::ui::*;
-
-// mod ui;
+use druid_widget_nursery::WidgetExt as _;
 
 #[derive(Clone, Data, PartialEq, Debug, Serialize, Deserialize)]
 pub enum Format {
@@ -38,7 +34,6 @@ pub enum Format {
     Webp,
     Bmp
 }
-
 impl Format {
     pub fn to_string(&self) -> String {
         match self {
@@ -290,6 +285,7 @@ pub struct Screenshot {
     pub receiver_app: CrossReceiver<usize>,
     #[data(ignore)]
     pub sender_app: Sender<(String, String, String, String)>,
+    pub flag_copy: bool,
 }
 
 impl Screenshot {
@@ -456,6 +452,7 @@ impl Screenshot {
             flag_focus: true,
             receiver_app,
             sender_app,
+            flag_copy: false,
         }
     }
 
@@ -487,12 +484,9 @@ impl Screenshot {
             .show_titlebar(false)
             .transparent(true)
             .window_size((width, height))
-            // .set_window_state(WindowState::Maximized)
             .resizable(true)
             .set_position((0.0, 0.0))
             .set_always_on_top(true);
-
-          //  current.set_window_state(WindowState::Restored);
         ctx.new_window(new_win);
     }
 
@@ -501,11 +495,9 @@ impl Screenshot {
         let scale = displays[0].scale_factor as f64;
         let width = displays[0].width as f64 * scale;
         let height = displays[0].height as f64 * scale;
-
         let mut current = ctx.window().clone();
         current.set_window_state(WindowState::Minimized);
         self.full_screen = false;
-
         self.area.start = Point::new(0.0, 0.0);
         self.area.end = Point::new(0.0, 0.0);
         self.area.width = 0.0;
@@ -542,8 +534,6 @@ impl Screenshot {
             .transparent(true)
             .window_size((width, height))
             .resizable(false);
-            // .set_window_state(WindowState::Maximized);
-            // .set_position((0.0, 0.0));
 
         ctx.new_window(new_win);
     }
@@ -559,7 +549,6 @@ impl Screenshot {
             .replace(".", "-")
             .replace(":", "-")
             .replace(" ", "_");
-        // self.name += &self.format.to_string();
 
         self.img = ImageBuf::from_raw(
             image.clone().into_raw(),
@@ -567,9 +556,7 @@ impl Screenshot {
             image.clone().width() as usize,
             image.clone().height() as usize,
         );
-        // if self.monitor_id != 0{
-        //     self.flag_desk2 = true;
-        // }
+
         self.screen_fatto = true;
         self.flag_transparency = false;
     }
@@ -591,7 +578,6 @@ impl Screenshot {
             .replace(".", "-")
             .replace(":", "-")
             .replace(" ", "_");
-        // self.name += &self.format.to_string();
 
         self.img = ImageBuf::from_raw(
             image.clone().into_raw(),
@@ -609,7 +595,6 @@ impl Screenshot {
             .title(self.name.clone())
             .set_window_state(druid_shell::WindowState::Maximized)
             .set_always_on_top(true);
-            // .menu(menu);
         ctx.new_window(window);
     }
 
@@ -837,7 +822,6 @@ pub fn build_toolbar() -> impl Widget<Screenshot>{
                 };
                 data.write.0[data.write.1].color = color;
                 data.write.0[data.write.1].thickness = data.line_thickness;
-                // data.write.0[data.write.1].position = mouse_event.pos;
                 data.write.0[data.write.1].position = Point::new(data.resized_area.x + data.resized_area.width/2., data.resized_area.y + data.resized_area.height/2. );
                 data.write.0[data.write.1].text = data.text.clone();
                 assign_dimensions_to_textbox(data, data.write.1);
@@ -978,9 +962,10 @@ pub fn show_screen(
     image: ImageBuf,
     data: &mut Screenshot,
 ) -> impl Widget<Screenshot> {
+    data.flag_copy = false;
     data.flag_edit = false;
     data.flag_resize = false;
-    data.reset_resize_rect();
+    data.reset_resize_rect();//inizializzazione resize_area con le dimensioni dello screenshot (succede anche in cancel)
     let original_x = data.resized_area.x;
     let original_y = data.resized_area.y;
     let original_w = data.resized_area.width;
@@ -995,9 +980,9 @@ pub fn show_screen(
 
     let sizedbox = SizedBox::new(img).width(1000.).height(562.5);
 
-    let resize_button =
-        Button::new("resize").on_click(move |_ctx: &mut EventCtx, data: &mut Screenshot, _env| {
+    let resize_button = Image::new(ImageBuf::from_data(include_bytes!("./svg/crop.png")).unwrap()).fix_size(30., 30.).border(Color::BLACK, 1.).stack_tooltip("Resize").on_click(move |_ctx: &mut EventCtx, data: &mut Screenshot, _env| {
             data.flag_resize = true;
+            data.flag_copy=false;
         });
 
     let cancel_button =
@@ -1006,13 +991,15 @@ pub fn show_screen(
             data.reset_resize_rect();
         });
 
-    let edit_button =
-    Button::new("edit").on_click(move |_ctx: &mut EventCtx, data: &mut Screenshot, _env| {
+    let edit_button = Image::new(ImageBuf::from_data(include_bytes!("./svg/edit.png")).unwrap()).fix_size(30., 30.).border(Color::BLACK, 1.).stack_tooltip("Edit")
+    .on_click(move |_ctx: &mut EventCtx, data: &mut Screenshot, _env| {
         data.flag_edit = true;
+        data.flag_copy=false;
     });
-
-    let copy_button = Button::new("copy to clipboard").on_click(
+    
+    let copy_button = Image::new(ImageBuf::from_data(include_bytes!("./svg/copy.png")).unwrap()).fix_size(30., 30.).border(Color::BLACK, 1.).stack_tooltip("Copy to Clipboard").on_click(
         move |_ctx: &mut EventCtx, data: &mut Screenshot, _env| {
+            data.flag_copy=true;
             let mut clip = Clipboard::new().unwrap();
             let formatted: ImageData = ImageData {
                 width: data.img.width(),
@@ -1021,6 +1008,12 @@ pub fn show_screen(
             };
             clip.set_image(formatted).unwrap();
         },
+    );
+
+    let label_copied = Either::new(
+        |data: &Screenshot, _: &Env| data.flag_copy,
+        Label::new("COPIED").background(Color::GREEN).border(Color::BLACK, 1.),
+        Label::new(""),
     );
 
     let update_button =
@@ -1098,7 +1091,6 @@ pub fn show_screen(
 
                 let mut points: Vec<imageproc::point::Point<i32>> = Vec::new();
                 for i in 0..line.0.len()-1{
-                    // println!("POINT: {:?}", line.0);
                     let direction = (line.0[i+1] - line.0[i]).normalize(); // Calcola la direzione della freccia
                     let normal = druid::kurbo::Vec2::new(-direction.y, direction.x); 
                     for j in 0..(line.2*2.) as usize{
@@ -1113,15 +1105,12 @@ pub fn show_screen(
                         
                         drawing::draw_polygon_mut(&mut image1, &points, rgba_col);
                         points.clear();
-                        // drawing::draw_line_segment_mut(&mut image1, ( ((line.0[i].x-data.resized_area.x)*scale_x+j as f64*normal.x) as f32, ((line.0[i].y-data.resized_area.y)*scale_y+j as f64*normal.y) as f32) , ( ((line.0[i+1].x-data.resized_area.x)*scale_x+j as f64*normal.x) as f32, ((line.0[i+1].y-data.resized_area.y)*scale_y+j as f64*normal.y) as f32), rgba_col);
                     }
                 }
             }
 
             //draw highlighters
             for (index, highlighters) in data.draw_high.0.clone().iter().enumerate(){
-
-                // println!("n: {}", index);
 
                 if index == data.draw_high.1{
                     break;
@@ -1182,16 +1171,12 @@ pub fn show_screen(
                 let rgba_col = Rgba([color.as_rgba8().0, color.as_rgba8().1, color.as_rgba8().2, color.as_rgba8().3]);
 
                 for i in 0..(arrows.thickness as f64) as usize{
-                    // if i%2 == 0{
                         drawing::draw_line_segment_mut(&mut image1, ( ((start_x*scale_x)+i as f64*normal.x) as f32, ((start_y*scale_y)+i as f64*normal.y) as f32) , ( ((end_x*scale_x)+i as f64*normal.x) as f32, ((end_y*scale_y)+i as f64*normal.y) as f32), rgba_col);
                         drawing::draw_line_segment_mut(&mut image1, ( ((arrow_base1x*scale_x)+i as f64*normal2.x) as f32, ((arrow_base1y*scale_y)+i as f64*normal2.y) as f32) , ( ((end_x*scale_x)+i as f64*normal2.x) as f32, ((end_y*scale_y)+i as f64*normal2.y) as f32), rgba_col);
                         drawing::draw_line_segment_mut(&mut image1, ( ((arrow_base2x*scale_x)+i as f64*normal3.x) as f32, ((arrow_base2y*scale_y)+i as f64*normal3.y) as f32) , ( ((end_x*scale_x)+i as f64*normal3.x) as f32, ((end_y*scale_y)+i as f64*normal3.y) as f32), rgba_col);
-                    // }else{
                         drawing::draw_line_segment_mut(&mut image1, ( ((start_x*scale_x)-i as f64*normal.x) as f32, ((start_y*scale_y)-i as f64*normal.y) as f32) , ( ((end_x*scale_x)-i as f64*normal.x) as f32, ((end_y*scale_y)-i as f64*normal.y) as f32), rgba_col);
                         drawing::draw_line_segment_mut(&mut image1, ( ((arrow_base1x*scale_x)-i as f64*normal2.x) as f32, ((arrow_base1y*scale_y)-i as f64*normal2.y) as f32) , ( ((end_x*scale_x)-i as f64*normal2.x) as f32, ((end_y*scale_y)-i as f64*normal2.y) as f32), rgba_col);
                         drawing::draw_line_segment_mut(&mut image1, ( ((arrow_base2x*scale_x)-i as f64*normal3.x) as f32, ((arrow_base2y*scale_y)-i as f64*normal3.y) as f32) , ( ((end_x*scale_x)-i as f64*normal3.x) as f32, ((end_y*scale_y)-i as f64*normal3.y) as f32), rgba_col);
-                    // }
-
                    
                 }
             }
@@ -1389,16 +1374,23 @@ pub fn show_screen(
         }
     );
 
+    let mut row_copied = Flex::row();
+    row_copied.add_child(label_copied);
     row_button1.add_child(button2);
+    row_button1.add_default_spacer();
     row_button1.add_child(button1);
+    row_button1.add_default_spacer();
     row_button1.add_child(button3);
     row_button2.add_child(save);
     row_button2.add_child(cancel);
+    col.add_default_spacer();
     col.add_child(Either::new(
         |data: &Screenshot, _: &Env| data.flag_edit,
         row_button2,
         row_button1,
     ));
+    col.add_default_spacer();
+    col.add_child(row_copied);
 
     let zstack_layout = ZStack::new(sizedbox).with_centered_child(Either::new(
         |data: &Screenshot, _: &Env| data.flag_resize,
@@ -1422,7 +1414,6 @@ pub fn show_screen(
     col.add_default_spacer();
     
     col
-    // .controller(HotkeyScreen {code: String::from(""), prec: String::from(""), timer: TimerToken::next(), flag: false})
     
 }
 
@@ -1440,19 +1431,17 @@ pub fn draw_rect() -> impl Widget<Screenshot> {
                 data.area.rgba.a,
             ),
         );
-        // ctx.stroke(rect, &druid::Color::RED, 0.8);
     })
     .controller(MouseClickDragController {
         t1: TimerToken::next(),
         flag: true,
     })
     .center();
-
-    // Flex::column().with_child(paint)
     paint
 }
 
 pub fn draw_resize(data: &Screenshot) -> impl Widget<Screenshot>{
+    //rettangolo rosso sovrapposto all'immagine per selezionare la porzione da mantenere dopo il ritaglio
     Painter::new(|ctx, data: &Screenshot, _env| {
         let rect = druid::Rect::from_points(
             (data.resized_area.x, data.resized_area.y),
@@ -1465,7 +1454,7 @@ pub fn draw_resize(data: &Screenshot) -> impl Widget<Screenshot>{
         ctx.stroke(rect, &druid::Color::RED, 2.0);
     })
     .center()
-    .controller(ResizeController {
+    .controller(ResizeController {//controller per la gestione del rettangolo di ritaglio
         selected_part: ResizeInteraction::NoInteraction,
         original_area: ResizedArea::new_parameter(
             data.resized_area.x,

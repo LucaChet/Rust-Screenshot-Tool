@@ -76,9 +76,11 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
         data: &mut Screenshot,
         env: &Env,
     ) {
+        //azquisizione schermo intero
         if data.full_screen == false {
             let mut current = ctx.window().clone();
 
+            //timer impostato dall'utente
             if data.time_interval > 0.0 && self.flag && !data.flag_desk2{ //flag_desk2 serve per il secondo monitor, scatta dopo tot secondi e al secondo giro entra nell'else if
                 self.t1 = ctx.request_timer(Duration::from_secs(data.time_interval as u64));
                 self.flag = false;
@@ -89,25 +91,20 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
                 current.set_window_state(WindowState::Minimized);
                 ctx.set_cursor(&Cursor::Crosshair);
             }
+
+            //gestione eventi legati alla selezione di un'area sullo schermo e dello scadere del timer impostato per il delay
             match event {
                 Event::MouseDown(mouse_event) => {
                     if mouse_event.button == MouseButton::Left {
                         let start_point = mouse_event.pos;
-
                         ctx.set_active(true);
-
-                        // Memorizza il punto iniziale
                         data.area.start = start_point;
                         data.area.end = start_point;
                     }
                 }
                 Event::MouseUp(mouse_event) => {
                     if mouse_event.button == MouseButton::Left && ctx.is_active() {
-                        // Esegui qualcosa quando viene rilasciato il pulsante sinistro del mouse.
-                        // Ad esempio, puoi terminare il trascinamento.
-
                         data.flag_transparency = true;
-
                         data.area.rgba.r = 0.0;
                         data.area.rgba.g = 0.0;
                         data.area.rgba.b = 0.0;
@@ -172,7 +169,9 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
                 }
                 _ => {}
             }
-        } else if data.full_screen {
+        } 
+        //acquisizione area di schermo
+        else if data.full_screen {
             let mut current = ctx.window().clone();
             current.set_window_state(WindowState::Minimized);
 
@@ -184,6 +183,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
                 self.flag = false;
             }
             match event {
+                //scadenza timer delay impostato dall'interfaccia grafica
                 Event::Timer(id) => {
                     if self.t1 == *id {
                         data.do_screen();
@@ -222,7 +222,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for MouseClickDragControll
         child.update(ctx, old_data, data, env)
     }
 }
-
+//controller per l'acquisizione di un'area di schermo
 pub enum ResizeInteraction {
     NoInteraction,
     Area(f64, f64),
@@ -231,6 +231,7 @@ pub enum ResizeInteraction {
     Left,
     Right,
 }
+//controller  per il rettangolo rosso di ritaglio
 pub struct ResizeController {
     pub selected_part: ResizeInteraction,
     pub original_area: ResizedArea,
@@ -425,7 +426,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for ResizeController {
 }
 
 pub struct Delegate;
-
+//controller per la funzione salva con nome
 impl AppDelegate<Screenshot> for Delegate {
     fn command(
         &mut self,
@@ -434,8 +435,8 @@ impl AppDelegate<Screenshot> for Delegate {
         cmd: &Command,
         data: &mut Screenshot,
         _env: &Env,
-    ) -> Handled {
-
+    ) -> Handled {  
+        //finestra di dialogo per la funzione "salva come..."
         if let Some(file_info) = cmd.get(commands::SAVE_FILE_AS) {
             let color_type = ColorType::Rgba8;
             let file = std::fs::File::create(file_info.path()).unwrap();
@@ -451,6 +452,7 @@ impl AppDelegate<Screenshot> for Delegate {
             }
             return Handled::Yes;
         }
+        //management della finestra di dialogo di selezione di una cartella delegata al SO ospitante
         if let Some(file_info) = cmd.get(commands::OPEN_FILE) {
             match std::fs::read_dir(file_info.path()) {
                 Ok(_) => {
@@ -462,6 +464,7 @@ impl AppDelegate<Screenshot> for Delegate {
             }
             return Handled::Yes;
         }
+        //apertura di una nuova finestrella per la modifica delle shortcut impostatae   
         if cmd.is(SHORTCUT) {
             let new_win = WindowDesc::new(modify_shortcut())
                 .title(LocalizedString::new("Shortcut"))
@@ -473,6 +476,7 @@ impl AppDelegate<Screenshot> for Delegate {
 
 }
 
+//controller delegato alla gestione dell'inserimento di una nuova shortcut in sostituzione di una di quelle di default
 pub struct HotKeyController{
     pub flag: bool, //serve per ordine tra modifiers e tasti normali
     pub first: bool,
@@ -508,7 +512,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotKeyController {
             self.n_alt = 0;
             self.n_shift = 0;
         }
-
+        //ascolto tasti premuti e costruzione nuova shortcut
         if let Event::KeyDown(key) = event {
 
             if data.new_shortcut == "".to_string(){
@@ -568,7 +572,6 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotKeyController {
 
                 if self.n_ctrl > 1 || self.n_alt > 1 || self.n_shift > 1{
                     data.dup_modifier = true;
-                    println!("OP OP OP");
                 }
 
                 let shortcut: Vec<&str> = data.new_shortcut.split("+").collect();
@@ -686,6 +689,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotKeyController {
 
 }
 
+//controller per la gestione delle azioni scatenate dalle shortcut
 pub struct HotkeyScreen{
     pub prec: String,
     pub code: String,
@@ -711,7 +715,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
             self.timer = ctx.request_timer(Duration::from_millis(100 as u64));
             self.flag= true;
         }
-
+        //gestione evento timer di polling del thread in ascolto della combinazione di tasti premuta per un'azione
         if let Event::Timer(id) = event{
 
             if self.timer == *id{
@@ -734,6 +738,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
             self.timer = ctx.request_timer(Duration::from_millis(100 as u64));
         }
 
+        //ascolto tasti premuti quando sulla finestra principale dell'app per le ulteriori shortcut implementate (SAVE, SAVE AS, QUIT)
         if let Event::KeyDown(key) = event{
 
             self.code = key.key.clone().to_string();
@@ -851,7 +856,7 @@ pub struct Drawer{
     pub flag_writing: bool,
     pub first_click_pos: Point,
 }
-
+//controller per la gestione della modifica dell'immagine acquisita con gli annotation tools
 impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
     fn event(
         &mut self,
@@ -1201,6 +1206,9 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
     }
 
 }
+
+
+//FUNZIONI DI SUPPORTO AI CONTROLLER
 
 fn is_in_image(point: Point, data: &Screenshot) -> bool{
     point.x >= data.resized_area.x &&

@@ -241,6 +241,7 @@ pub struct Screenshot {
     pub editing_name: bool,
     pub screen_fatto: bool,
     pub img: ImageBuf,
+    pub tmp_img: ImageBuf,
     pub area: SelectedArea,
     pub flag_transparency: bool,
     pub flag_selection: bool, //serve per fare far partire il controller solo dopo aver acquisito l'area
@@ -411,6 +412,7 @@ impl Screenshot {
             editing_name: false,
             screen_fatto: false,
             img: ImageBuf::empty(),
+            tmp_img: ImageBuf::empty(), 
             area: SelectedArea::new(),
             flag_transparency: false,
             flag_selection: false,
@@ -1047,6 +1049,30 @@ pub fn show_screen(
             ctx.window().close();
         });
 
+    let save_all_button = Button::new("SAVE ALL").border(Color::BLACK, 1.).background(Color::GREEN)
+    .on_click(|ctx, data: &mut Screenshot, _env: &Env|{
+
+    }
+    );
+
+    let undo_all_button = Button::new("UNDO ALL").border(Color::BLACK, 1.).background(Color::RED)
+    .on_click(|ctx, data: &mut Screenshot, _env: &Env|{
+        
+    }
+    );
+
+    let save_all =  Either::new(
+        |data: &Screenshot, _: &Env| !data.flag_edit && !data.flag_resize,
+        save_all_button,
+        Label::new(""),
+    );
+
+    let undo_all =  Either::new(
+        |data: &Screenshot, _: &Env| !data.flag_edit && !data.flag_resize,
+        undo_all_button,
+        Label::new(""),
+    );
+
     let button1 = Either::new(
         |data: &Screenshot, _: &Env| data.flag_resize,
         cancel_button,
@@ -1376,11 +1402,15 @@ pub fn show_screen(
 
     let mut row_copied = Flex::row();
     row_copied.add_child(label_copied);
+    row_button1.add_child(save_all);
+    row_button1.add_default_spacer();
     row_button1.add_child(button2);
     row_button1.add_default_spacer();
     row_button1.add_child(button1);
     row_button1.add_default_spacer();
     row_button1.add_child(button3);
+    row_button1.add_default_spacer();
+    row_button1.add_child(undo_all);
     row_button2.add_child(save);
     row_button2.add_child(cancel);
     col.add_default_spacer();
@@ -1411,7 +1441,7 @@ pub fn show_screen(
     col.add_default_spacer();
     col.add_child(zstack_layout);
     col.add_default_spacer();
-    col.add_default_spacer();
+    // col.add_default_spacer();
     
     col
     

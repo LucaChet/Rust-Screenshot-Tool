@@ -23,6 +23,7 @@ use std::str::FromStr;
 use druid_widget_nursery::WidgetExt as _;
 
 #[derive(Clone, Data, PartialEq, Debug, Serialize, Deserialize)]
+//formati supportati dall'applicazione per la codifica dell'immagine acquisita
 pub enum Format {
     Png,
     Jpg,
@@ -234,6 +235,15 @@ impl Square {
 
 #[derive(Clone, Data, Lens)]
 pub struct Screenshot {
+    pub name: String,   //nome dello screenshot
+    pub format: Format, //formato selezionato per la codifica dell'immagine
+    pub new_name: String,   //stringa testuale per modificare il nome del file
+    pub new_shortcut: String,   //stringa testuale per inserire una shortcut personalizzata
+    pub editing_name: bool, //controllo attivazione textbox per inserimento nuovo nome
+    pub screen_fatto: bool, //indicatore se dal lancio dell'applicazione si sia già fatto almeno uno screenshot
+    pub img: ImageBuf,  //dati dell'immagine 
+    pub area: SelectedArea, //area utilizzata per la funzione di cattura dell'immagine sulla finestra oscurata
+    pub flag_transparency: bool,    //flag indicatore se si sia finito di selezionare un'area con la funzione capture area
     pub name: String,
     pub format: Format,
     pub new_name: String,
@@ -245,26 +255,26 @@ pub struct Screenshot {
     pub area: SelectedArea,
     pub flag_transparency: bool,
     pub flag_selection: bool, //serve per fare far partire il controller solo dopo aver acquisito l'area
-    pub full_screen: bool,
-    pub time_interval: f64,
-    pub default_save_path: String,
-    pub flag_resize: bool,
-    pub resized_area: ResizedArea,
-    pub shortcut: HashMap<Shortcut, String>,
-    pub prec_hotkey: String,
-    pub selected_shortcut: Shortcut,
-    pub editing_shortcut: bool,
-    pub duplicate_shortcut: bool,
-    pub saved_shortcut: bool,
-    pub shortcut_order: bool,  //order della shortcut per i modifiers
-    pub one_key: bool,
-    pub dup_modifier: bool,
-    pub with_modifiers: bool,
-    pub keycode_screen: String,
-    pub keycode_capture: String,
-    pub monitor_id: usize,
-    pub flag_desk2: bool,
-    pub flag_edit: bool,
+    pub full_screen: bool,  //indicatore se si sia scattato uno screenshot completo dello schermo o un'area
+    pub time_interval: f64, //intervallo impostato dall'utente per ritardare lo screenshot
+    pub default_save_path: String,  //path di salvataggio predefinito
+    pub flag_resize: bool,  //indicatore se si sia entrati nella modalità resize
+    pub resized_area: ResizedArea,  //area selezionata per il ritaglio
+    pub shortcut: HashMap<Shortcut, String>,    //mappa contenente le shorcut
+    pub prec_hotkey: String,    //variabile di supporto alla personalizzazione delle shorcut
+    pub selected_shortcut: Shortcut,    //shortcut che si sta attualmente modificando 
+    pub editing_shortcut: bool, //flag indicatore se si stia attualmente customizzando una shortcut
+    pub duplicate_shortcut: bool,   //flag di supporto alla customizzazione della shortcut
+    pub saved_shortcut: bool,   //flag di supporto alla customizzazione della shortcut
+    pub shortcut_order: bool,  //flag di supporto alla customizzazione della shortcut
+    pub one_key: bool,  //flag di supporto alla customizzazione della shortcut
+    pub dup_modifier: bool, //flag di supporto alla customizzazione della shortcut
+    pub with_modifiers: bool,   //flag di supporto alla customizzazione della shortcut
+    pub keycode_screen: String, //rappresentazione della shortcut di screenshot per il thread in ascolto
+    pub keycode_capture: String,    //rappresentazione della shortcut di caputre per il thread in ascolto
+    pub monitor_id: usize,  //identificatore del monitor selezionato in caso l'app ne rilevi più di una
+    pub flag_desk2: bool,   
+    pub flag_edit: bool,    //indicatore se si stia modifcando l'immagine
     pub edit_tool: EditTool,
     pub color_tool: ColorTool,
     pub shape_tool: ShapeTool,
@@ -275,7 +285,7 @@ pub struct Screenshot {
     pub circles: (im::Vector<Circle>, usize),
     pub squares: (im::Vector<Square>, usize),
     pub text: String,
-    pub editing_text: i32,
+    pub editing_text: i32,  //indice del testo attualmente selezionato mentre si sta editando l'immagine
     pub line_thickness: f64,
     pub painter: ImageBuf,
     pub custom_cursor: Cursor,
@@ -540,6 +550,7 @@ impl Screenshot {
         ctx.new_window(new_win);
     }
 
+    //acquisizione dello screenshot sul monitor impostato in caso di setup con multischermo
     pub fn do_screen(&mut self) {
         let screens = Screen::all().unwrap();
         let image: ImageBuffer<Rgba<u8>, Vec<u8>> = screens[self.monitor_id].capture().unwrap();
@@ -959,6 +970,8 @@ pub fn build_toolbar() -> impl Widget<Screenshot>{
     col
 }
 
+//gestione della visualizzazione di uno screenshot appena acquisito
+//questa funzione implementa inoltre gli entry point delle funzionalità di gestione e modifica dello screenshot
 pub fn show_screen(
     _ctx: &mut EventCtx,
     image: ImageBuf,
@@ -968,6 +981,9 @@ pub fn show_screen(
     data.flag_edit = false;
     data.flag_resize = false;
     data.reset_resize_rect();//inizializzazione resize_area con le dimensioni dello screenshot (succede anche in cancel)
+    
+    //PREPARAZIONE INTERFACCIA GRAFICA
+    
     let original_x = data.resized_area.x;
     let original_y = data.resized_area.y;
     let original_w = data.resized_area.width;
@@ -1399,6 +1415,8 @@ pub fn show_screen(
             data.line_thickness = 3.;
         }
     );
+
+    //COSTRUZIONE INTERFACCIA GRAFICA
 
     let mut row_copied = Flex::row();
     row_copied.add_child(label_copied);

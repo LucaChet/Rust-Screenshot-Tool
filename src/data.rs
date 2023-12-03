@@ -244,16 +244,7 @@ pub struct Screenshot {
     pub img: ImageBuf,  //dati dell'immagine 
     pub area: SelectedArea, //area utilizzata per la funzione di cattura dell'immagine sulla finestra oscurata
     pub flag_transparency: bool,    //flag indicatore se si sia finito di selezionare un'area con la funzione capture area
-    pub name: String,
-    pub format: Format,
-    pub new_name: String,
-    pub new_shortcut: String,
-    pub editing_name: bool,
-    pub screen_fatto: bool,
-    pub img: ImageBuf,
     pub tmp_img: ImageBuf,
-    pub area: SelectedArea,
-    pub flag_transparency: bool,
     pub flag_selection: bool, //serve per fare far partire il controller solo dopo aver acquisito l'area
     pub full_screen: bool,  //indicatore se si sia scattato uno screenshot completo dello schermo o un'area
     pub time_interval: f64, //intervallo impostato dall'utente per ritardare lo screenshot

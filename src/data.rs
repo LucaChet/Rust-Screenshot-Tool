@@ -991,6 +991,7 @@ pub fn show_screen(
     let mut row_button2 = Flex::row();
     let row_toolbar = build_toolbar();
 
+    //image passata alla funzione perchè qui non abbiamo data: &Screenshot
     let sizedbox = SizedBox::new(img).width(1000.).height(562.5);
 
     let resize_button = Image::new(ImageBuf::from_data(include_bytes!("./svg/crop.png")).unwrap()).fix_size(30., 30.).border(Color::BLACK, 1.).stack_tooltip("Resize").on_click(move |_ctx: &mut EventCtx, data: &mut Screenshot, _env| {
@@ -1060,13 +1061,13 @@ pub fn show_screen(
             ctx.window().close();
         });
 
-    // let save_all_button = Button::new("SAVE ALL").border(Color::BLACK, 1.).background(Color::GREEN)
-    // .on_click(|ctx, data: &mut Screenshot, _env: &Env|{
+    let save_all_button = Button::new("SAVE ALL CHANGES").border(Color::BLACK, 1.).background(Color::GREEN)
+    .on_click(|ctx, _data: &mut Screenshot, _env: &Env|{
+        ctx.window().close();
+    }
+    );
 
-    // }
-    // );
-
-    let undo_all_button = Button::new("UNDO ALL").border(Color::BLACK, 1.).background(Color::RED)
+    let undo_all_button = Button::new("DISCARD ALL CHANGES").border(Color::BLACK, 1.).background(Color::RED)
     .on_click(|ctx, data: &mut Screenshot, _env: &Env|{
         data.img = data.tmp_img.clone();
         data.screen_window(ctx);
@@ -1074,11 +1075,11 @@ pub fn show_screen(
     }
     );
 
-    // let save_all =  Either::new(
-    //     |data: &Screenshot, _: &Env| !data.flag_edit && !data.flag_resize,
-    //     save_all_button,
-    //     Label::new(""),
-    // );
+    let save_all =  Either::new(
+        |data: &Screenshot, _: &Env| !data.flag_edit && !data.flag_resize,
+        save_all_button,
+        Label::new(""),
+    );
 
     let undo_all =  Either::new(
         |data: &Screenshot, _: &Env| !data.flag_edit && !data.flag_resize,
@@ -1297,7 +1298,7 @@ pub fn show_screen(
                 }
                 
                 let start_x = new_startx-data.resized_area.x;
-                let start_y =new_starty-data.resized_area.y;
+                let start_y = new_starty-data.resized_area.y;
 
                 let w_original: f64 = (new_endx - new_startx).abs();
                 let h_original = (new_endy - new_starty).abs();
@@ -1417,14 +1418,16 @@ pub fn show_screen(
 
     let mut row_copied = Flex::row();
     row_copied.add_child(label_copied);
-    // row_button1.add_child(save_all);
-    // row_button1.add_default_spacer();
+    row_button1.add_child(save_all);
+    row_button1.add_default_spacer();
+    row_button1.add_default_spacer();
+
     row_button1.add_child(button2);
     row_button1.add_default_spacer();
     row_button1.add_child(button1);
     row_button1.add_default_spacer();
     row_button1.add_child(button3);
-    row_button1.add_default_spacer();
+    
     row_button1.add_default_spacer();
     row_button1.add_default_spacer();
     row_button1.add_child(undo_all);

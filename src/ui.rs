@@ -53,7 +53,7 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
 
     let gestisci_screen = Either::new(
         |data: &Screenshot, _: &Env| data.screen_fatto,
-        Button::new("Gestisci screen").on_click(
+        Button::new("Manage screenshot").on_click(
             |ctx: &mut EventCtx, data: &mut Screenshot, _env| {
                 data.screen_window(ctx);
                 ctx.request_update();
@@ -79,7 +79,7 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
 
     let button_modifica = Either::new(
         |data: &Screenshot, _: &Env| data.screen_fatto,
-        Button::new("Modifica nome").on_click(|ctx: &mut EventCtx, data: &mut Screenshot, _env| {
+        Button::new("Modify name").on_click(|ctx: &mut EventCtx, data: &mut Screenshot, _env| {
             if data.flag_focus{
                 data.flag_focus = false;
             }else{
@@ -88,8 +88,8 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
             if data.new_name.trim() != "" {
                 data.name = data.new_name.clone();
                 data.new_name = "".to_string();
-                Screenshot::toggle_textbox_state(data);
             }
+            Screenshot::toggle_textbox_state(data);
             ctx.request_update();
         }),
         Label::new(""),

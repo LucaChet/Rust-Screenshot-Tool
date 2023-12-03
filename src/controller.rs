@@ -706,7 +706,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
         data: &mut Screenshot,
         _env: &Env,
     ) {
-
+        
         if data.flag_focus{
             ctx.request_focus();
         }
@@ -715,6 +715,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
             self.timer = ctx.request_timer(Duration::from_millis(100 as u64));
             self.flag= true;
         }
+
         //gestione evento timer di polling del thread in ascolto della combinazione di tasti premuta per un'azione
         if let Event::Timer(id) = event{
 
@@ -1002,7 +1003,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
                             let delta_x = mouse_event.pos.x - self.first_click_pos.x;
                             let delta_y = mouse_event.pos.y - self.first_click_pos.y;
                             self.first_click_pos = mouse_event.pos;
-                            if is_in_image(Point::new(pos_init.x + delta_x, pos_init.y + delta_y), data) && is_in_image(Point::new(pos_final.x + delta_x, pos_final.y + delta_y), data){
+                            if is_in_image(Point::new(pos_init.x + delta_x, pos_init.y + delta_y), data) || is_in_image(Point::new(pos_final.x + delta_x, pos_final.y + delta_y), data){
                                 data.write.0[data.editing_text as usize].position = Point::new(pos_init.x + delta_x, pos_init.y + delta_y);
                             }
                         }

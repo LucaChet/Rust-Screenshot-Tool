@@ -561,6 +561,8 @@ impl Screenshot {
             image.clone().height() as usize,
         );
 
+        self.tmp_img = self.img.clone();
+
         self.screen_fatto = true;
         self.flag_transparency = false;
     }
@@ -589,6 +591,8 @@ impl Screenshot {
             image.clone().width() as usize,
             image.clone().height() as usize,
         );
+
+        self.tmp_img = self.img.clone();
 
         self.screen_fatto = true;
         self.flag_transparency = false;
@@ -991,7 +995,7 @@ pub fn show_screen(
 
     let resize_button = Image::new(ImageBuf::from_data(include_bytes!("./svg/crop.png")).unwrap()).fix_size(30., 30.).border(Color::BLACK, 1.).stack_tooltip("Resize").on_click(move |_ctx: &mut EventCtx, data: &mut Screenshot, _env| {
             data.flag_resize = true;
-            data.flag_copy=false;
+            data.flag_copy = false;
         });
 
     let cancel_button =
@@ -1056,23 +1060,25 @@ pub fn show_screen(
             ctx.window().close();
         });
 
-    let save_all_button = Button::new("SAVE ALL").border(Color::BLACK, 1.).background(Color::GREEN)
-    .on_click(|ctx, data: &mut Screenshot, _env: &Env|{
+    // let save_all_button = Button::new("SAVE ALL").border(Color::BLACK, 1.).background(Color::GREEN)
+    // .on_click(|ctx, data: &mut Screenshot, _env: &Env|{
 
-    }
-    );
+    // }
+    // );
 
     let undo_all_button = Button::new("UNDO ALL").border(Color::BLACK, 1.).background(Color::RED)
     .on_click(|ctx, data: &mut Screenshot, _env: &Env|{
-        
+        data.img = data.tmp_img.clone();
+        data.screen_window(ctx);
+        ctx.window().close();
     }
     );
 
-    let save_all =  Either::new(
-        |data: &Screenshot, _: &Env| !data.flag_edit && !data.flag_resize,
-        save_all_button,
-        Label::new(""),
-    );
+    // let save_all =  Either::new(
+    //     |data: &Screenshot, _: &Env| !data.flag_edit && !data.flag_resize,
+    //     save_all_button,
+    //     Label::new(""),
+    // );
 
     let undo_all =  Either::new(
         |data: &Screenshot, _: &Env| !data.flag_edit && !data.flag_resize,
@@ -1326,7 +1332,7 @@ pub fn show_screen(
                 let font_data: &[u8] = include_bytes!("./DejaVuSansMono.ttf");
                 let font = Font::try_from_bytes(font_data).unwrap();
                 let scale = text.thickness as f32;
-                drawing::draw_text_mut(&mut image1, rgba_col, (start_x*scale_x) as i32, (start_y*scale_y) as i32, rusttype::Scale { x: scale*2., y: scale*2. }, &font, text.text.as_str());
+                drawing::draw_text_mut(&mut image1, rgba_col, (start_x*scale_x) as i32, (start_y*scale_y) as i32, rusttype::Scale { x: scale*scale_x as f32, y: scale*scale_y as f32 }, &font, text.text.as_str());
             }
 
             data.img = ImageBuf::from_raw(
@@ -1411,13 +1417,15 @@ pub fn show_screen(
 
     let mut row_copied = Flex::row();
     row_copied.add_child(label_copied);
-    row_button1.add_child(save_all);
-    row_button1.add_default_spacer();
+    // row_button1.add_child(save_all);
+    // row_button1.add_default_spacer();
     row_button1.add_child(button2);
     row_button1.add_default_spacer();
     row_button1.add_child(button1);
     row_button1.add_default_spacer();
     row_button1.add_child(button3);
+    row_button1.add_default_spacer();
+    row_button1.add_default_spacer();
     row_button1.add_default_spacer();
     row_button1.add_child(undo_all);
     row_button2.add_child(save);

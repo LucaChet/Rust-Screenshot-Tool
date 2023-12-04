@@ -695,6 +695,7 @@ pub struct HotkeyScreen{
     pub code: String,
     pub timer: TimerToken,
     pub flag: bool,
+    pub count: usize,
 }
 
 impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
@@ -712,6 +713,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
         }
 
         if self.flag == false{
+            
             self.timer = ctx.request_timer(Duration::from_millis(100 as u64));
             self.flag= true;
         }
@@ -720,6 +722,14 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
         if let Event::Timer(id) = event{
 
             if self.timer == *id{
+
+                if data.saved_screen{
+                    self.count += 1;
+                    if self.count == 30{
+                        data.saved_screen = false;
+                        self.count = 0;
+                    }
+                }
             
                 if data.receiver_app.is_full(){
                     let mx = data.receiver_app.recv();
@@ -759,27 +769,30 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
             let quit: Vec<&str> = data.shortcut.get(&Shortcut::Quit).unwrap().split("+").collect();
          
             if shortcut == save{
-                let image: ImageBuffer<image::Rgba<u8>, Vec<u8>> = ImageBuffer::from_vec(
-                    data.img.width() as u32,
-                    data.img.height() as u32,
-                    data.img.raw_pixels().to_vec(),
-                )
-                .unwrap();
-
-                data.new_shortcut.clear();
-                self.prec.clear();
-
-                image
-                    .save_with_format(
-                        format!(
-                            "{}/{}{}",
-                            data.default_save_path.clone(),
-                            data.name,
-                            data.format.to_string()
-                        ),
-                        image::ImageFormat::Png,
+                if data.name != "" {
+                    data.saved_screen = true;
+                    let image: ImageBuffer<image::Rgba<u8>, Vec<u8>> = ImageBuffer::from_vec(
+                        data.img.width() as u32,
+                        data.img.height() as u32,
+                        data.img.raw_pixels().to_vec(),
                     )
-                    .expect("Errore nel salvataggio automatico!");
+                    .unwrap();
+
+                    data.new_shortcut.clear();
+                    self.prec.clear();
+
+                    image
+                        .save_with_format(
+                            format!(
+                                "{}/{}{}",
+                                data.default_save_path.clone(),
+                                data.name,
+                                data.format.to_string()
+                            ),
+                            image::ImageFormat::Png,
+                        )
+                        .expect("Errore nel salvataggio automatico!");
+                }
             }else if shortcut == save_as{
                 let formats = vec![
                     FileSpec::new("jpg", &["jpg"]),

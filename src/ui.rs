@@ -94,6 +94,12 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
         }),
         Label::new(""),
     );
+
+    let saved = Either::new(
+        |data: &Screenshot, _: &Env| data.saved_screen,
+        Label::new(|data: &Screenshot, _: &Env| format!("Saved in {}", data.default_save_path)).border(Color::BLACK, 1.).background(Color::GREEN),
+        Label::new(""),
+    );
     
     row.add_child(screen_name);
     row.add_child(button_modifica);
@@ -102,7 +108,8 @@ pub fn ui_builder() -> impl Widget<Screenshot> {
 
     ZStack::new(col.with_flex_child(row, FlexParams::new(1.0, CrossAxisAlignment::Start)))
         .with_aligned_child(Padding::new(5., row_timer), UnitPoint::BOTTOM_RIGHT)
-        .controller(HotkeyScreen {code: String::from(""), prec: String::from(""), timer: TimerToken::next(), flag: false})
+        .with_aligned_child(Padding::new(5., saved), UnitPoint::BOTTOM_LEFT)
+        .controller(HotkeyScreen {code: String::from(""), prec: String::from(""), timer: TimerToken::next(), flag: false, count: 0})
 
 }
 
@@ -126,6 +133,7 @@ pub fn menu(_: Option<WindowId>, _state: &Screenshot, _: &Env) -> Menu<Screensho
     .entry(
         MenuItem::new(LocalizedString::new("Save..")).on_activate(
             |_ctx, data: &mut Screenshot, _env|{
+                data.saved_screen = true;
                 let image: ImageBuffer<image::Rgba<u8>, Vec<u8>> = ImageBuffer::from_vec(
                     data.img.width() as u32,
                     data.img.height() as u32,

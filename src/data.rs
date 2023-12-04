@@ -288,6 +288,7 @@ pub struct Screenshot {
     #[data(ignore)]
     pub sender_app: Sender<(String, String, String, String)>,
     pub flag_copy: bool,
+    pub saved_screen: bool,
 }
 
 impl Screenshot {
@@ -456,6 +457,7 @@ impl Screenshot {
             receiver_app,
             sender_app,
             flag_copy: false,
+            saved_screen: false,
         }
     }
 

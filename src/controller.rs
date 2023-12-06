@@ -785,7 +785,6 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
         }
 
         if self.flag == false{
-            
             self.timer = ctx.request_timer(Duration::from_millis(100 as u64));
             self.flag= true;
         }
@@ -1045,6 +1044,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for Drawer {
                     ctx.set_active(false);
                     data.draw_high.0.push_back(Highlighter::new());
                     data.draw_high.1 += 1;
+                    ctx.set_cursor(&Cursor::Arrow);
                 }
                 _ => {}
             }

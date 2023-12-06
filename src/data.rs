@@ -14,7 +14,7 @@ use crate::controller::*;
 use arboard::Clipboard;
 use arboard::ImageData;
 use screenshots::Screen;
-use serde::{Deserialize, Serialize};
+// use serde::{Deserialize, Serialize};
 use std::{borrow::Cow, hash::Hash};
 use rusttype::*;
 use std::sync::mpsc::{channel, Sender};
@@ -22,7 +22,7 @@ use crossbeam::channel::{bounded, Receiver as CrossReceiver};
 use std::str::FromStr;
 use druid_widget_nursery::WidgetExt as _;
 
-#[derive(Clone, Data, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, Data, PartialEq, Debug)]
 //formati supportati dall'applicazione per la codifica dell'immagine acquisita
 pub enum Format {
     Png,
@@ -54,7 +54,7 @@ pub enum ShapeTool{
     Square,
 }
 
-#[derive(Clone, Data, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, Data, PartialEq, Debug)]
 pub enum EditTool{
     Pencil,
     Highlighter,
@@ -63,7 +63,7 @@ pub enum EditTool{
     Eraser,
 }
 
-#[derive(Clone, Data, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, Data, PartialEq, Debug)]
 pub enum ColorTool{
     Black,
     Red,
@@ -73,7 +73,7 @@ pub enum ColorTool{
     White,
 }
 
-#[derive(Clone, Data, PartialEq, Eq, Debug, Serialize, Deserialize, Hash)]
+#[derive(Clone, Data, PartialEq, Eq, Debug, Hash)]
 pub enum Shortcut{
     Save,
     SaveAs,

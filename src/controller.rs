@@ -531,7 +531,7 @@ impl AppDelegate<Screenshot> for Delegate {
                     data.default_save_path = String::from(file_info.path().to_str().unwrap());
                 }
                 Err(e) => {
-                    println!("Error opening path: {e}");
+                    panic!("Error opening path: {e}");
                 }
             }
             return Handled::Yes;

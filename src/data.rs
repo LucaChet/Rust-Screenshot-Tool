@@ -325,7 +325,6 @@ impl Screenshot {
         let (sender_app, receiver_th) = channel::<(String, String, String, String)>();
         
         std::thread::spawn(move ||{
-            println!("dentro il thread");
                 let mut hk1 = livesplit_hotkey::Hotkey{
                     modifiers: livesplit_hotkey::Modifiers::CONTROL,
                     key_code: livesplit_hotkey::KeyCode::KeyT,
@@ -398,8 +397,10 @@ impl Screenshot {
                             hk2 = hk2_new;
                         },
                     }
-               
+                   
                 }
+            
+
         });
 
         Self {

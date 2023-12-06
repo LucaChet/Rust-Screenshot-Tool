@@ -439,17 +439,89 @@ impl AppDelegate<Screenshot> for Delegate {
         //finestra di dialogo per la funzione "salva come..."
         if let Some(file_info) = cmd.get(commands::SAVE_FILE_AS) {
             let color_type = ColorType::Rgba8;
-            let file = std::fs::File::create(file_info.path()).unwrap();
-            let encoder = image::codecs::png::PngEncoder::new(file);
+            let mut file = std::fs::File::create(file_info.path()).unwrap();
+            
 
-            if let Err(e) = encoder.write_image(
-                data.img.raw_pixels(),
-                data.img.width() as u32,
-                data.img.height() as u32,
-                color_type,
-            ) {
-                println!("Error writing file: {}", e);
+            match data.format{
+                Format::Png => {
+                    let encoder = image::codecs::png::PngEncoder::new(file);
+                    if let Err(e) = encoder.write_image(
+                        data.img.raw_pixels(),
+                        data.img.width() as u32,
+                        data.img.height() as u32,
+                        color_type,
+                    ) {
+                        panic!("Error writing file: {}", e);
+                    }
+                },
+                Format::Jpg => {
+                    let encoder = image::codecs::jpeg::JpegEncoder::new(file);
+                    if let Err(e) = encoder.write_image(
+                        data.img.raw_pixels(),
+                        data.img.width() as u32,
+                        data.img.height() as u32,
+                        color_type,
+                    ) {
+                        panic!("Error writing file: {}", e);
+                    }
+                },
+                Format::Bmp => {
+                    let encoder = image::codecs::bmp::BmpEncoder::new(&mut file);
+                    if let Err(e) = encoder.write_image(
+                        data.img.raw_pixels(),
+                        data.img.width() as u32,
+                        data.img.height() as u32,
+                        color_type,
+                    ) {
+                        panic!("Error writing file: {}", e);
+                    }
+                },
+                Format::Pnm => {
+                    let encoder = image::codecs::pnm::PnmEncoder::new(file);
+                    if let Err(e) = encoder.write_image(
+                        data.img.raw_pixels(),
+                        data.img.width() as u32,
+                        data.img.height() as u32,
+                        color_type,
+                    ) {
+                        panic!("Error writing file: {}", e);
+                    }
+                },
+                Format::Qoi => {
+                    let encoder = image::codecs::qoi::QoiEncoder::new(file);
+                    if let Err(e) = encoder.write_image(
+                        data.img.raw_pixels(),
+                        data.img.width() as u32,
+                        data.img.height() as u32,
+                        color_type,
+                    ) {
+                        panic!("Error writing file: {}", e);
+                    }
+                },
+                Format::Tga => {
+                    let encoder = image::codecs::tga::TgaEncoder::new(file);
+                    if let Err(e) = encoder.write_image(
+                        data.img.raw_pixels(),
+                        data.img.width() as u32,
+                        data.img.height() as u32,
+                        color_type,
+                    ) {
+                        panic!("Error writing file: {}", e);
+                    }
+                },
+                Format::Tiff => {
+                    let encoder = image::codecs::tiff::TiffEncoder::new(file);
+                    if let Err(e) = encoder.write_image(
+                        data.img.raw_pixels(),
+                        data.img.width() as u32,
+                        data.img.height() as u32,
+                        color_type,
+                    ) {
+                        panic!("Error writing file: {}", e);
+                    }
+                },
             }
+
             return Handled::Yes;
         }
         //management della finestra di dialogo di selezione di una cartella delegata al SO ospitante
@@ -781,6 +853,16 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
                     data.new_shortcut.clear();
                     self.prec.clear();
 
+                    let format = match data.format{
+                        Format::Png => image::ImageFormat::Png,
+                        Format::Jpg => image::ImageFormat::Jpeg,
+                        Format::Bmp => image::ImageFormat::Bmp,
+                        Format::Pnm => image::ImageFormat::Pnm,
+                        Format::Qoi => image::ImageFormat::Qoi,
+                        Format::Tga => image::ImageFormat::Tga,
+                        Format::Tiff => image::ImageFormat::Tiff,
+                    };
+
                     image
                         .save_with_format(
                             format!(
@@ -789,7 +871,7 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
                                 data.name,
                                 data.format.to_string()
                             ),
-                            image::ImageFormat::Png,
+                            format,
                         )
                         .expect("Errore nel salvataggio automatico!");
                 }
@@ -797,12 +879,10 @@ impl<W: Widget<Screenshot>> Controller<Screenshot, W> for HotkeyScreen {
                 let formats = vec![
                     FileSpec::new("jpg", &["jpg"]),
                     FileSpec::new("png", &["png"]),
-                    FileSpec::new("gif", &["gif"]),
                     FileSpec::new("pnm", &["pnm"]),
                     FileSpec::new("tga", &["tga"]),
                     FileSpec::new("qoi", &["qoi"]),
                     FileSpec::new("tiff", &["tiff"]),
-                    FileSpec::new("webp", &["webp"]),
                     FileSpec::new("bmp", &["bmp"]),
                 ];
 

@@ -162,12 +162,10 @@ pub fn menu(_: Option<WindowId>, _state: &Screenshot, _: &Env) -> Menu<Screensho
                 let formats = vec![
                     FileSpec::new("jpg", &["jpg"]),
                     FileSpec::new("png", &["png"]),
-                    FileSpec::new("gif", &["gif"]),
                     FileSpec::new("pnm", &["pnm"]),
                     FileSpec::new("tga", &["tga"]),
                     FileSpec::new("qoi", &["qoi"]),
                     FileSpec::new("tiff", &["tiff"]),
-                    FileSpec::new("webp", &["webp"]),
                     FileSpec::new("bmp", &["bmp"]),
                 ];
     
@@ -212,12 +210,6 @@ pub fn menu(_: Option<WindowId>, _state: &Screenshot, _: &Env) -> Menu<Screensho
             }
         )
     ).entry(
-        MenuItem::new(LocalizedString::new("Gif")).on_activate(
-            |_ctx, data: &mut Screenshot, _env|{
-                data.format = Format::Gif;
-            }
-        )
-    ).entry(
         MenuItem::new(LocalizedString::new("Pnm")).on_activate(
             |_ctx, data: &mut Screenshot, _env|{
                 data.format = Format::Pnm;
@@ -239,12 +231,6 @@ pub fn menu(_: Option<WindowId>, _state: &Screenshot, _: &Env) -> Menu<Screensho
         MenuItem::new(LocalizedString::new("Tiff")).on_activate(
             |_ctx, data: &mut Screenshot, _env|{
                 data.format = Format::Tiff;
-            }
-        )
-    ).entry(
-        MenuItem::new(LocalizedString::new("Webp")).on_activate(
-            |_ctx, data: &mut Screenshot, _env|{
-                data.format = Format::Webp;
             }
         )
     ).entry(

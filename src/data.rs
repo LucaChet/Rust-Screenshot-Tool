@@ -27,12 +27,10 @@ use druid_widget_nursery::WidgetExt as _;
 pub enum Format {
     Png,
     Jpg,
-    Gif,
     Pnm,
     Tga,
     Qoi,
     Tiff,
-    Webp,
     Bmp
 }
 impl Format {
@@ -40,12 +38,10 @@ impl Format {
         match self {
             Format::Jpg => ".jpg".to_string(),
             Format::Png => ".png".to_string(),
-            Format::Gif => ".gif".to_string(),
             Format::Pnm => ".pnm".to_string(),
             Format::Tga => ".tga".to_string(),
             Format::Qoi => ".qoi".to_string(),
             Format::Tiff => ".tiff".to_string(),
-            Format::Webp => ".webp".to_string(),
             Format::Bmp => ".bmp".to_string(),
         }
     }

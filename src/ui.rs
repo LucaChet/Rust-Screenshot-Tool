@@ -355,7 +355,7 @@ associated with the action\n")).center();
 
     let row_alert5 = Flex::row().with_child(Either::new(
         |data: &Screenshot, _: &Env| data.dup_modifier && data.saved_shortcut,
-        Label::new("MODIFIERS CANNOT BE DUPLICATED!⚠️").border(Color::RED, 2.).background(Color::BLACK).center(),
+        Label::new("⚠️MODIFIERS CANNOT BE DUPLICATED!⚠️").border(Color::RED, 2.).background(Color::BLACK).center(),
         Label::new(""),
     ));
 

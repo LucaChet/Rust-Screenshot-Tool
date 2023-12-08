@@ -1060,7 +1060,7 @@ pub fn show_screen(
             ctx.window().close();
         });
 
-    let save_all_button = Button::new("SAVE ALL CHANGES").border(Color::BLACK, 1.).background(Color::GREEN)
+    let save_all_button = Button::new("SAVE AND CLOSE").border(Color::BLACK, 1.).background(Color::GREEN)
     .on_click(|ctx, _data: &mut Screenshot, _env: &Env|{
         ctx.window().close();
     }

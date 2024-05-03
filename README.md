@@ -20,7 +20,7 @@ This project implements a screen grabbing utility written in Rust. The utility i
 
 To use the utility, follow these steps:
 
-1. [Download](#) and install the application on your system.
+1. Download and install the application on your system.
 2. Launch the utility.
 3. Use the UI to select desired options such as output format, annotation tools, etc.
 4. Use hotkeys or UI buttons to initiate screen grabbing.
